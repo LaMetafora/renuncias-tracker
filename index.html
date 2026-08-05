@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Renuncias Tracker · La Metafora</title>
+  <meta name="description" content="Registro inicial de salidas, renuncias y nombramientos fallidos del gobierno de Jose Antonio Kast.">
+  <meta property="og:title" content="Renuncias Tracker">
+  <meta property="og:description" content="Tracker de salidas del gobierno de Jose Antonio Kast, con filtros, graficos y fuentes.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Archivo+Narrow:wght@600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-head">
+    <div class="wrap head-grid">
+      <a class="brand" href="#top" aria-label="Renuncias Tracker">
+        <span class="brand-mark">LM</span>
+        <span>
+          <span class="brand-kicker">La Metafora</span>
+          <strong>Renuncias Tracker</strong>
+        </span>
+      </a>
+      <nav class="nav" aria-label="Navegacion principal">
+        <a href="#visualizaciones">Visualizaciones</a>
+        <a href="#registro">Registro</a>
+        <a href="#metodologia">Metodologia</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div class="tracker-card">
+          <p class="meta" id="updatedLabel">Actualizado</p>
+          <div class="big-number" id="totalCount">5</div>
+          <h1>autoridades fuera del gobierno de Kast</h1>
+          <p class="lede">Registro inicial con los cinco casos mas recientes. Cada caso enlaza a una fuente de prensa y queda listo para escalar cuando entre la base completa.</p>
+        </div>
+        <aside class="latest-card" aria-labelledby="latestTitle">
+          <p class="eyebrow">Ultimo caso</p>
+          <h2 id="latestTitle">Cargando...</h2>
+          <p id="latestMeta"></p>
+          <a id="latestSource" class="source-link" href="#" target="_blank" rel="noopener">Ver fuente</a>
+        </aside>
+      </div>
+    </section>
+
+    <section id="visualizaciones" class="section">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Resumen</p>
+          <h2>Patrones visibles en el prototipo</h2>
+        </div>
+        <div class="stats" id="stats"></div>
+        <div class="viz-grid">
+          <article class="panel">
+            <div class="panel-head">
+              <h3>Por cargo</h3>
+              <span id="officeHint"></span>
+            </div>
+            <div class="bars" id="officeBars"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-head">
+              <h3>Por motivo</h3>
+              <span>Categoria editorial</span>
+            </div>
+            <div class="bars" id="reasonBars"></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="registro" class="section">
+      <div class="wrap">
+        <div class="section-head table-head">
+          <div>
+            <p class="eyebrow">Registro completo</p>
+            <h2>Primeros cinco casos</h2>
+          </div>
+          <label class="search">
+            <span>Buscar</span>
+            <input id="searchInput" type="search" placeholder="Nombre, region, ministerio..." autocomplete="off">
+          </label>
+        </div>
+        <div class="case-list" id="caseList"></div>
+      </div>
+    </section>
+
+    <section id="metodologia" class="section methodology">
+      <div class="wrap">
+        <p class="eyebrow">Metodologia</p>
+        <h2>Que cuenta este tracker</h2>
+        <p>Incluye renuncias, remociones y nombramientos que no llegaron a concretarse. Este prototipo usa cinco casos para validar el formato publico; la version completa debe alimentarse desde la base terminada.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footer-grid">
+      <span>La Metafora · Registro propio en base a prensa</span>
+      <a href="data/cases.json">Descargar datos del prototipo</a>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

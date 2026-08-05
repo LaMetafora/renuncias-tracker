@@ -1,0 +1,105 @@
+{
+  "metadata": {
+    "title": "Renuncias Tracker",
+    "updated_at": "2026-08-03",
+    "source_note": "Prototipo con los cinco casos mas recientes del registro publico original.",
+    "case_count": 5
+  },
+  "cases": [
+    {
+      "case_id": "rk-2026-0039",
+      "person_name": "Patricio Ponce",
+      "office_level": "seremi",
+      "office_title": "Seremi de Vivienda",
+      "ministry": "Vivienda",
+      "territory_type": "regional",
+      "region": "Maule",
+      "exit_date": "2026-08-01",
+      "exit_date_label": "1 ago",
+      "exit_type": "voluntary_resignation",
+      "reason_category": "personal_reasons",
+      "reason_summary": "Renuncia voluntaria. Aludio a los nuevos topes de remuneraciones.",
+      "has_judicial_or_formal_complaint": false,
+      "source": {
+        "outlet": "CNN Chile",
+        "url": "https://www.cnnchile.com/pais/confirman-la-renuncia-del-seremi-del-minvu-en-el-maule-marca-la-segunda-baja-regional-del-gobierno-en-menos-de-24-horas/"
+      }
+    },
+    {
+      "case_id": "rk-2026-0038",
+      "person_name": "Karla Kepec",
+      "office_level": "seremi",
+      "office_title": "Seremi de Salud",
+      "ministry": "Salud",
+      "territory_type": "regional",
+      "region": "Arica y Parinacota",
+      "exit_date": "2026-07-30",
+      "exit_date_label": "30 jul",
+      "exit_type": "resignation_requested",
+      "reason_category": "public_management_questioning",
+      "reason_summary": "Renuncia pedida por el Minsal tras filtrarse un mensaje suyo que exigia ser republicano o hijo de republicano para postular a dos cupos en la seremi.",
+      "has_judicial_or_formal_complaint": false,
+      "source": {
+        "outlet": "The Clinic",
+        "url": "https://www.theclinic.cl/2026/07/30/minsal-pide-la-renuncia-a-seremi-de-arica-que-exigia-que-postulantes-a-cupo-laboral-fueran-republicanos-o-hijos-de/"
+      }
+    },
+    {
+      "case_id": "rk-2026-0037",
+      "person_name": "Cristian Cabezas",
+      "office_level": "seremi",
+      "office_title": "Seremi de Trabajo",
+      "ministry": "Trabajo",
+      "territory_type": "regional",
+      "region": "Tarapaca",
+      "exit_date": "2026-07-27",
+      "exit_date_label": "27 jul",
+      "exit_type": "voluntary_resignation",
+      "reason_category": "judicial_or_formal_complaint",
+      "reason_summary": "Renuncia en medio de denuncias por presunto acoso y maltrato laboral, y por eventual uso indebido de recursos publicos.",
+      "has_judicial_or_formal_complaint": true,
+      "source": {
+        "outlet": "24Horas",
+        "url": "https://www.24horas.cl/actualidad/nacional/renuncia-seremi-de-vivienda-en-el-maule-es-baja-n-28-de-autoridades-kast"
+      }
+    },
+    {
+      "case_id": "rk-2026-0036",
+      "person_name": "Fabian Barrientos",
+      "office_level": "seremi",
+      "office_title": "Seremi de Salud",
+      "ministry": "Salud",
+      "territory_type": "regional",
+      "region": "Magallanes",
+      "exit_date": "2026-07-25",
+      "exit_date_label": "25 jul",
+      "exit_type": "resignation_requested",
+      "reason_category": "judicial_or_formal_complaint",
+      "reason_summary": "Renuncia pedida por el gobierno. Denuncia por un presunto delito de connotacion sexual.",
+      "has_judicial_or_formal_complaint": true,
+      "source": {
+        "outlet": "La Tercera",
+        "url": "https://www.latercera.com/nacional/noticia/minsal-solicita-renuncia-del-seremi-de-salud-de-magallanes-en-medio-de-investigacion/"
+      }
+    },
+    {
+      "case_id": "rk-2026-0035",
+      "person_name": "Juan Pablo Rodriguez",
+      "office_level": "subsecretary",
+      "office_title": "Subsecretario de Hacienda",
+      "ministry": "Hacienda",
+      "territory_type": "national",
+      "region": "Nacional",
+      "exit_date": "2026-07-23",
+      "exit_date_label": "23 jul",
+      "exit_type": "removed",
+      "reason_category": "drug_test_or_compliance",
+      "reason_summary": "Removido tras dar positivo en test de drogas. Niega consumir y presento un contraexamen negativo de la U. Catolica.",
+      "has_judicial_or_formal_complaint": false,
+      "source": {
+        "outlet": "La Tercera",
+        "url": "https://www.latercera.com/politica/noticia/no-refleja-mi-realidad-exsubsecretario-de-hacienda-afirma-que-no-consume-drogas-y-atribuye-a-un-error-el-test-positivo-que-motivo-su-salida/"
+      }
+    }
+  ]
+}
