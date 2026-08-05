@@ -76,9 +76,9 @@ def numeric_counter(value: Any) -> int | None:
 
 def office_level(raw: str | None) -> str:
     text = strip_accents((raw or "").lower())
-    if "ministro" in text:
+    if re.search(r"\bministro\b|\bministra\b", text):
         return "minister"
-    if "subsecretario" in text:
+    if re.search(r"\bsubsecretario\b|\bsubsecretaria\b", text):
         return "subsecretary"
     if "seremi" in text:
         return "seremi"
@@ -189,7 +189,7 @@ def build() -> dict[str, Any]:
         case = {
             "case_id": clean_text(row.get("master_id")),
             "person_name": name,
-            "office_level": "seremi" if seremi_counter is not None else office_level(raw_cargo),
+            "office_level": "seremi" if seremi_counter is not None else office_level(cargo_group),
             "cargo_group": cargo_group,
             "cargo_group_key": slugify(cargo_group),
             "office_title": raw_cargo,

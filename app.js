@@ -78,13 +78,14 @@ function formatDate(dateString) {
 
 function renderStats(items) {
   const offices = byCount(items, "office_level");
+  const cargos = byCount(items, "cargo_group");
   const regions = new Set(items.map((item) => item.region)).size;
 
   const stats = [
     ["Casos registrados", items.length],
     ["Seremis", metadata.seremi_count ?? offices.seremi ?? 0],
-    ["Subsecretarios", offices.subsecretary || 0],
-    ["Ministros", offices.minister || 0],
+    ["Subsecretarios", cargos["Subsecretario/a"] ?? offices.subsecretary ?? 0],
+    ["Ministros", cargos["Ministro/a"] ?? offices.minister ?? 0],
     ["Territorios", regions]
   ];
 
@@ -123,7 +124,7 @@ function renderCases(items) {
         <p class="case-reason">${escapeHtml(item.reason_summary)}</p>
       </div>
       <div class="badge-row">
-        <span class="tag">${escapeHtml(officeLabels[item.office_level] || item.office_level)}</span>
+        <span class="tag">${escapeHtml(item.cargo_group || officeLabels[item.office_level] || item.office_level)}</span>
         <span class="tag">${escapeHtml(exitTypeLabels[item.exit_type] || item.exit_type)}</span>
         ${item.has_judicial_or_formal_complaint ? '<span class="tag alert">Denuncia reportada</span>' : ""}
         ${sourceMarkup(item)}
