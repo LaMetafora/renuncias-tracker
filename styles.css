@@ -343,15 +343,16 @@ h3 {
 
 .bar-row {
   display: grid;
-  grid-template-columns: 150px minmax(80px, 1fr) 32px;
+  grid-template-columns: minmax(150px, 220px) minmax(80px, 1fr) 32px;
   gap: 10px;
   align-items: center;
 }
 
 .bar-label {
   color: var(--ink);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .bar-track {

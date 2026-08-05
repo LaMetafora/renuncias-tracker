@@ -21,6 +21,12 @@ INCLUDE_RECOMMENDATIONS = {
     "appointment_not_effective",
 }
 
+EXCLUDE_RECOMMENDATIONS = {
+    "do_not_count_pending_only",
+    "pending_or_unconfirmed",
+    "pending_or_paused",
+}
+
 
 def strip_accents(value: str) -> str:
     return "".join(
@@ -54,6 +60,20 @@ def iso_date(value: Any) -> str | None:
     return parsed.date().isoformat()
 
 
+def numeric_counter(value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return int(value)
+    text = clean_text(value)
+    if not text:
+        return None
+    try:
+        return int(float(text))
+    except ValueError:
+        return None
+
+
 def office_level(raw: str | None) -> str:
     text = strip_accents((raw or "").lower())
     if "ministro" in text:
@@ -73,8 +93,27 @@ def office_level(raw: str | None) -> str:
     return "other"
 
 
+def slugify(value: str | None) -> str:
+    text = strip_accents((value or "otros cargos").lower())
+    text = re.sub(r"[^a-z0-9]+", "_", text).strip("_")
+    return text or "otros_cargos"
+
+
+def region_group(value: str) -> str:
+    normalized = strip_accents(value.lower())
+    if normalized == "nacional":
+        return "Gobierno central"
+    if normalized in {"araucania", "la araucania"}:
+        return "La Araucanía"
+    if normalized in {"metropolitana", "region metropolitana"}:
+        return "Región Metropolitana"
+    return value
+
+
 def exit_type(raw: str | None) -> str:
     text = strip_accents((raw or "").lower())
+    if "movimiento" in text:
+        return "internal_movement"
     if "nombramiento" in text and ("sin_efecto" in text or "sin efecto" in text):
         return "appointment_not_effective"
     if "solicitada" in text or "no_voluntaria" in text or "no voluntaria" in text:
@@ -134,7 +173,9 @@ def build() -> dict[str, Any]:
     for raw_row in rows[1:]:
         row = {h: raw_row[i] if i < len(raw_row) else None for h, i in index.items()}
         recommendation = clean_text(row.get("recomendacion_conteo"))
-        if recommendation not in INCLUDE_RECOMMENDATIONS:
+        seremi_counter = numeric_counter(row.get("Seremis Contador"))
+        counted_by_master = seremi_counter is not None and recommendation not in EXCLUDE_RECOMMENDATIONS
+        if recommendation not in INCLUDE_RECOMMENDATIONS and not counted_by_master:
             continue
         name = clean_text(row.get("nombre_master"))
         if not name:
@@ -142,15 +183,20 @@ def build() -> dict[str, Any]:
 
         date_value = iso_date(row.get("fecha_salida_master") or row.get("fecha_factiva") or row.get("fecha_renunciaskast"))
         summary = clean_text(row.get("razon_renunciaskast")) or clean_text(row.get("resumen_factiva")) or clean_text(row.get("titular_factiva"))
-        raw_cargo = clean_text(row.get("cargo"))
+        raw_cargo = clean_text(row.get("cargo_master")) or clean_text(row.get("cargo"))
+        cargo_group = clean_text(row.get("cargo")) or raw_cargo or "Otros cargos"
+        region = clean_text(row.get("region_master")) or "Nacional"
         case = {
             "case_id": clean_text(row.get("master_id")),
             "person_name": name,
-            "office_level": office_level(raw_cargo or clean_text(row.get("cargo_master"))),
-            "office_title": clean_text(row.get("cargo_master")) or raw_cargo,
+            "office_level": "seremi" if seremi_counter is not None else office_level(raw_cargo),
+            "cargo_group": cargo_group,
+            "cargo_group_key": slugify(cargo_group),
+            "office_title": raw_cargo,
             "ministry": clean_text(row.get("ministerio_master")),
-            "territory_type": "national" if clean_text(row.get("region_master")) == "Nacional" else "regional",
-            "region": clean_text(row.get("region_master")) or "Nacional",
+            "territory_type": "national" if region == "Nacional" else "regional",
+            "region": region,
+            "region_group": region_group(region),
             "exit_date": date_value,
             "exit_type": exit_type(clean_text(row.get("tipo_salida_factiva"))),
             "reason_category": reason_category(row, summary),
@@ -158,19 +204,28 @@ def build() -> dict[str, Any]:
             "has_judicial_or_formal_complaint": reason_category(row, summary) == "judicial_or_formal_complaint",
             "verification_status": "verified" if clean_text(row.get("chequeo_manual")) == "☑" else "needs_review",
             "count_recommendation": recommendation,
+            "seremi_counter": seremi_counter,
             "source": source_for(row),
         }
         cases.append(case)
 
     cases.sort(key=lambda item: item.get("exit_date") or "1900-01-01", reverse=True)
     office_counts = Counter(item["office_level"] for item in cases)
+    cargo_counts = Counter(item["cargo_group"] for item in cases)
+    region_counts = Counter(item["region_group"] for item in cases)
     return {
         "metadata": {
             "title": "Renuncias Tracker",
             "updated_at": "2026-08-01",
             "source_note": "Base generada desde la pestaña Master de contador de renuncias, 1 de agosto.xlsm.",
             "case_count": len(cases),
+            "seremi_count": max(
+                (item["seremi_counter"] or 0 for item in cases if item["office_level"] == "seremi"),
+                default=0,
+            ),
             "office_counts": dict(office_counts),
+            "cargo_counts": dict(cargo_counts),
+            "region_counts": dict(region_counts),
         },
         "cases": cases,
     }

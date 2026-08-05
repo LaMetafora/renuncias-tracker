@@ -25,6 +25,7 @@ const exitTypeLabels = {
   resignation_requested: "Renuncia pedida",
   removed: "Remocion",
   appointment_not_effective: "Nombramiento sin efecto",
+  internal_movement: "Movimiento interno",
   unknown: "Salida"
 };
 
@@ -43,6 +44,7 @@ const els = {
 };
 
 let cases = [];
+let metadata = {};
 
 function byCount(items, key) {
   return items.reduce((acc, item) => {
@@ -56,6 +58,15 @@ function sortByDateDesc(items) {
   return [...items].sort((a, b) => (b.exit_date || "").localeCompare(a.exit_date || ""));
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function formatDate(dateString) {
   if (!dateString) return "Sin fecha";
   return new Intl.DateTimeFormat("es-CL", {
@@ -67,12 +78,11 @@ function formatDate(dateString) {
 
 function renderStats(items) {
   const offices = byCount(items, "office_level");
-  const judicial = items.filter((item) => item.has_judicial_or_formal_complaint).length;
   const regions = new Set(items.map((item) => item.region)).size;
 
   const stats = [
-    ["Total", items.length],
-    ["Seremis", offices.seremi || 0],
+    ["Casos registrados", items.length],
+    ["Seremis", metadata.seremi_count ?? offices.seremi ?? 0],
     ["Subsecretarios", offices.subsecretary || 0],
     ["Ministros", offices.minister || 0],
     ["Territorios", regions]
@@ -81,7 +91,7 @@ function renderStats(items) {
   els.stats.innerHTML = stats.map(([label, value]) => `
     <div class="stat">
       <strong>${value}</strong>
-      <span>${label}</span>
+      <span>${escapeHtml(label)}</span>
     </div>
   `).join("");
 }
@@ -92,7 +102,7 @@ function renderBars(container, counts, labels) {
 
   container.innerHTML = entries.map(([key, value]) => `
     <div class="bar-row">
-      <div class="bar-label">${labels[key] || key}</div>
+      <div class="bar-label">${escapeHtml(labels[key] || key)}</div>
       <div class="bar-track" aria-hidden="true">
         <div class="bar-fill" style="width:${(value / max) * 100}%"></div>
       </div>
@@ -105,29 +115,37 @@ function renderCases(items) {
   const ordered = sortByDateDesc(items);
 
   els.caseList.innerHTML = ordered.map((item) => `
-    <article class="case-card">
+    <article class="case-card" id="${escapeHtml(item.case_id)}">
       <div class="case-date">${formatDate(item.exit_date)}</div>
       <div>
-        <h3>${item.person_name}</h3>
-        <div class="case-meta">${item.office_title} · ${item.ministry} · ${item.region}</div>
-        <p class="case-reason">${item.reason_summary}</p>
+        <h3>${escapeHtml(item.person_name)}</h3>
+        <div class="case-meta">${escapeHtml(item.office_title)} · ${escapeHtml(item.ministry)} · ${escapeHtml(item.region)}</div>
+        <p class="case-reason">${escapeHtml(item.reason_summary)}</p>
       </div>
       <div class="badge-row">
-        <span class="tag">${officeLabels[item.office_level] || item.office_level}</span>
-        <span class="tag">${exitTypeLabels[item.exit_type] || item.exit_type}</span>
+        <span class="tag">${escapeHtml(officeLabels[item.office_level] || item.office_level)}</span>
+        <span class="tag">${escapeHtml(exitTypeLabels[item.exit_type] || item.exit_type)}</span>
         ${item.has_judicial_or_formal_complaint ? '<span class="tag alert">Denuncia reportada</span>' : ""}
-        ${sourceMarkup(item.source)}
+        ${sourceMarkup(item)}
       </div>
     </article>
   `).join("");
 }
 
-function sourceMarkup(source) {
-  if (!source) return '<span class="source-link source-static">Fuente</span>';
-  if (source.url) {
-    return `<a class="source-link" href="${source.url}" target="_blank" rel="noopener">${source.outlet}</a>`;
-  }
-  return `<span class="source-link source-static">${source.outlet}</span>`;
+function sourceHref(item) {
+  return item.source?.url || `data/cases.json#${encodeURIComponent(item.case_id)}`;
+}
+
+function sourceMarkup(item) {
+  const source = item.source;
+  const hasDirectUrl = Boolean(source?.url);
+  const outlet = source?.outlet || "fuente";
+  const label = hasDirectUrl ? `Abrir nota · ${outlet}` : `Ver dato · ${outlet}`;
+  const title = hasDirectUrl
+    ? (source.title || `Abrir fuente en ${outlet}`)
+    : `Este caso no trae URL publica en la base; abre el registro de datos.`;
+
+  return `<a class="source-link ${hasDirectUrl ? "" : "source-data"}" href="${escapeHtml(sourceHref(item))}" target="${hasDirectUrl ? "_blank" : "_self"}" rel="noopener" title="${escapeHtml(title)}">${escapeHtml(label)}</a>`;
 }
 
 function renderFiltered() {
@@ -139,7 +157,8 @@ function renderFiltered() {
       item.ministry,
       item.region,
       item.reason_summary,
-      item.source?.outlet
+      item.source?.outlet,
+      item.source?.title
     ].join(" ").toLowerCase();
     return haystack.includes(query);
   });
@@ -150,6 +169,7 @@ function renderFiltered() {
 async function boot() {
   const response = await fetch("data/cases.json");
   const payload = await response.json();
+  metadata = payload.metadata || {};
   cases = sortByDateDesc(payload.cases);
   const latest = cases[0];
 
@@ -157,17 +177,16 @@ async function boot() {
   els.totalCount.textContent = payload.metadata.case_count;
   els.latestTitle.textContent = latest.person_name;
   els.latestMeta.textContent = `${latest.office_title} · ${latest.region} · ${formatDate(latest.exit_date)}`;
-  if (latest.source?.url) {
-    els.latestSource.href = latest.source.url;
-    els.latestSource.textContent = `Fuente: ${latest.source.outlet}`;
-  } else {
-    els.latestSource.removeAttribute("href");
-    els.latestSource.textContent = `Fuente: ${latest.source?.outlet || "sin enlace publico"}`;
-  }
+  els.latestSource.href = sourceHref(latest);
+  els.latestSource.textContent = latest.source?.url
+    ? `Abrir nota · ${latest.source.outlet}`
+    : `Ver dato · ${latest.source?.outlet || "fuente"}`;
+  els.latestSource.target = latest.source?.url ? "_blank" : "_self";
+  els.latestSource.title = latest.source?.title || "Abrir registro de datos";
 
   renderStats(cases);
-  renderBars(els.officeBars, byCount(cases, "office_level"), officeLabels);
-  renderBars(els.reasonBars, byCount(cases, "reason_category"), reasonLabels);
+  renderBars(els.officeBars, byCount(cases, "cargo_group"), {});
+  renderBars(els.reasonBars, byCount(cases, "region_group"), {});
   els.officeHint.textContent = `${cases.length} casos`;
   renderCases(cases);
 

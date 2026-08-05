@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Renuncias Tracker · La Metafora</title>
-  <meta name="description" content="Registro de salidas, renuncias y nombramientos fallidos del gobierno de Jose Antonio Kast.">
-  <meta property="og:title" content="Renuncias Tracker">
-  <meta property="og:description" content="Tracker de salidas del gobierno de Jose Antonio Kast, con filtros, graficos y fuentes.">
+  <title>Contador de renuncias · La Metafora</title>
+  <meta name="description" content="Conteo periodistico de salidas, renuncias y nombramientos fallidos del gobierno de Jose Antonio Kast.">
+  <meta property="og:title" content="Contador de renuncias">
+  <meta property="og:description" content="Archivo periodistico de salidas del gobierno de Jose Antonio Kast, con visualizaciones, registro y fuentes clickeables.">
   <meta property="og:type" content="website">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,9 +20,9 @@
         <img src="assets/la-metafora-logo.png" alt="La Metafora">
       </a>
       <nav class="nav" aria-label="Navegacion principal">
-        <a href="#visualizaciones">Visualizaciones</a>
-        <a href="#registro">Registro</a>
-        <a href="#metodologia">Metodologia</a>
+        <a href="#visualizaciones">Radiografia</a>
+        <a href="#registro">Archivo</a>
+        <a href="#metodologia">Criterio editorial</a>
       </nav>
     </div>
   </header>
@@ -33,22 +33,22 @@
         <div class="tracker-card">
           <div class="issue-rule">
             <span id="updatedLabel">Actualizado</span>
-            <span>Renuncias Tracker</span>
+            <span>Contador de renuncias</span>
           </div>
           <div class="hero-copy">
             <div class="big-number" id="totalCount">5</div>
             <div>
-              <p class="eyebrow">Base Master</p>
-              <h1>autoridades fuera del gobierno de Kast</h1>
-              <p class="lede">Registro construido desde la pestaña Master de la base editorial. Cada salida conserva fuente, cargo, region y motivo editorial normalizado.</p>
+              <p class="eyebrow">Seguimiento periodistico</p>
+              <h1>las bajas que marcan el inicio del gobierno de Kast</h1>
+              <p class="lede">Un archivo en desarrollo de renuncias, remociones y nombramientos que no llegaron a concretarse. Cada caso se publica con cargo, territorio, motivo informado y acceso directo a su fuente.</p>
             </div>
           </div>
         </div>
         <aside class="latest-card" aria-labelledby="latestTitle">
-          <p class="eyebrow">Ultimo caso</p>
+          <p class="eyebrow">Ultima salida registrada</p>
           <h2 id="latestTitle">Cargando...</h2>
           <p id="latestMeta"></p>
-          <a id="latestSource" class="source-link" href="#" target="_blank" rel="noopener">Ver fuente</a>
+          <a id="latestSource" class="source-link" href="#" target="_blank" rel="noopener">Abrir fuente</a>
         </aside>
       </div>
     </section>
@@ -56,8 +56,8 @@
     <section id="visualizaciones" class="section">
       <div class="wrap">
         <div class="section-head">
-          <p class="eyebrow">Resumen</p>
-          <h2>Patrones visibles en el prototipo</h2>
+          <p class="eyebrow">Radiografia</p>
+          <h2>Donde se concentran las salidas</h2>
         </div>
         <div class="stats" id="stats"></div>
         <div class="viz-grid">
@@ -70,8 +70,8 @@
           </article>
           <article class="panel">
             <div class="panel-head">
-              <h3>Por motivo</h3>
-              <span>Categoria editorial</span>
+              <h3>Por territorio</h3>
+              <span>Region + gobierno central</span>
             </div>
             <div class="bars" id="reasonBars"></div>
           </article>
@@ -83,8 +83,8 @@
       <div class="wrap">
         <div class="section-head table-head">
           <div>
-            <p class="eyebrow">Registro completo</p>
-            <h2>Registro Master</h2>
+            <p class="eyebrow">Archivo</p>
+            <h2>El registro caso a caso</h2>
           </div>
           <label class="search">
             <span>Buscar</span>
@@ -97,9 +97,9 @@
 
     <section id="metodologia" class="section methodology">
       <div class="wrap">
-        <p class="eyebrow">Metodologia</p>
-        <h2>Que cuenta este tracker</h2>
-        <p>Incluye renuncias, remociones y nombramientos que no llegaron a concretarse. La base publica se genera desde la pestaña Master del archivo editorial, dejando fuera filas pendientes o marcadas para no contar.</p>
+        <p class="eyebrow">Criterio editorial</p>
+        <h2>Que entra al contador</h2>
+        <p>El conteo incluye renuncias, remociones y nombramientos que no llegaron a concretarse. La base publica se genera desde la pestaña Master del archivo editorial y excluye filas pendientes, duplicadas o marcadas para no contar.</p>
       </div>
     </section>
   </main>
@@ -107,7 +107,7 @@
   <footer>
     <div class="wrap footer-grid">
       <span>La Metafora · Registro propio en base a prensa</span>
-      <a href="data/cases.json">Descargar datos del prototipo</a>
+      <a href="data/cases.json">Descargar datos abiertos</a>
     </div>
   </footer>
 
