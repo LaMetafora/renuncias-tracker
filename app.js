@@ -1,20 +1,31 @@
 const officeLabels = {
   minister: "Ministros/as",
   subsecretary: "Subsecretarios/as",
-  seremi: "Seremis"
+  seremi: "Seremis",
+  national_director: "Direcciones nacionales",
+  regional_director: "Direcciones regionales",
+  deputy_director: "Subdirecciones",
+  division_head: "Jefaturas",
+  other: "Otros cargos"
 };
 
 const reasonLabels = {
   personal_reasons: "Razones personales",
   public_management_questioning: "Gestion cuestionada",
   judicial_or_formal_complaint: "Denuncia o causa formal",
-  drug_test_or_compliance: "Test o cumplimiento"
+  drug_test_or_compliance: "Test o cumplimiento",
+  requirements_or_appointment: "Nombramiento o requisitos",
+  internal_conflict: "Conflicto interno",
+  not_specified: "Sin motivo detallado"
 };
 
 const exitTypeLabels = {
   voluntary_resignation: "Renuncia",
+  resignation: "Renuncia",
   resignation_requested: "Renuncia pedida",
-  removed: "Remocion"
+  removed: "Remocion",
+  appointment_not_effective: "Nombramiento sin efecto",
+  unknown: "Salida"
 };
 
 const els = {
@@ -42,10 +53,11 @@ function byCount(items, key) {
 }
 
 function sortByDateDesc(items) {
-  return [...items].sort((a, b) => b.exit_date.localeCompare(a.exit_date));
+  return [...items].sort((a, b) => (b.exit_date || "").localeCompare(a.exit_date || ""));
 }
 
 function formatDate(dateString) {
+  if (!dateString) return "Sin fecha";
   return new Intl.DateTimeFormat("es-CL", {
     day: "numeric",
     month: "short",
@@ -62,7 +74,7 @@ function renderStats(items) {
     ["Total", items.length],
     ["Seremis", offices.seremi || 0],
     ["Subsecretarios", offices.subsecretary || 0],
-    ["Con denuncia reportada", judicial],
+    ["Ministros", offices.minister || 0],
     ["Territorios", regions]
   ];
 
@@ -104,10 +116,18 @@ function renderCases(items) {
         <span class="tag">${officeLabels[item.office_level] || item.office_level}</span>
         <span class="tag">${exitTypeLabels[item.exit_type] || item.exit_type}</span>
         ${item.has_judicial_or_formal_complaint ? '<span class="tag alert">Denuncia reportada</span>' : ""}
-        <a class="source-link" href="${item.source.url}" target="_blank" rel="noopener">${item.source.outlet}</a>
+        ${sourceMarkup(item.source)}
       </div>
     </article>
   `).join("");
+}
+
+function sourceMarkup(source) {
+  if (!source) return '<span class="source-link source-static">Fuente</span>';
+  if (source.url) {
+    return `<a class="source-link" href="${source.url}" target="_blank" rel="noopener">${source.outlet}</a>`;
+  }
+  return `<span class="source-link source-static">${source.outlet}</span>`;
 }
 
 function renderFiltered() {
@@ -119,7 +139,7 @@ function renderFiltered() {
       item.ministry,
       item.region,
       item.reason_summary,
-      item.source.outlet
+      item.source?.outlet
     ].join(" ").toLowerCase();
     return haystack.includes(query);
   });
@@ -137,8 +157,13 @@ async function boot() {
   els.totalCount.textContent = payload.metadata.case_count;
   els.latestTitle.textContent = latest.person_name;
   els.latestMeta.textContent = `${latest.office_title} · ${latest.region} · ${formatDate(latest.exit_date)}`;
-  els.latestSource.href = latest.source.url;
-  els.latestSource.textContent = `Fuente: ${latest.source.outlet}`;
+  if (latest.source?.url) {
+    els.latestSource.href = latest.source.url;
+    els.latestSource.textContent = `Fuente: ${latest.source.outlet}`;
+  } else {
+    els.latestSource.removeAttribute("href");
+    els.latestSource.textContent = `Fuente: ${latest.source?.outlet || "sin enlace publico"}`;
+  }
 
   renderStats(cases);
   renderBars(els.officeBars, byCount(cases, "office_level"), officeLabels);

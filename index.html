@@ -4,24 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Renuncias Tracker · La Metafora</title>
-  <meta name="description" content="Registro inicial de salidas, renuncias y nombramientos fallidos del gobierno de Jose Antonio Kast.">
+  <meta name="description" content="Registro de salidas, renuncias y nombramientos fallidos del gobierno de Jose Antonio Kast.">
   <meta property="og:title" content="Renuncias Tracker">
   <meta property="og:description" content="Tracker de salidas del gobierno de Jose Antonio Kast, con filtros, graficos y fuentes.">
   <meta property="og:type" content="website">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Archivo+Narrow:wght@600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600;1,700&family=Libre+Baskerville:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="site-head">
     <div class="wrap head-grid">
       <a class="brand" href="#top" aria-label="Renuncias Tracker">
-        <span class="brand-mark">LM</span>
-        <span>
-          <span class="brand-kicker">La Metafora</span>
-          <strong>Renuncias Tracker</strong>
-        </span>
+        <img src="assets/la-metafora-logo.png" alt="La Metafora">
       </a>
       <nav class="nav" aria-label="Navegacion principal">
         <a href="#visualizaciones">Visualizaciones</a>
@@ -35,10 +31,18 @@
     <section class="hero">
       <div class="wrap hero-grid">
         <div class="tracker-card">
-          <p class="meta" id="updatedLabel">Actualizado</p>
-          <div class="big-number" id="totalCount">5</div>
-          <h1>autoridades fuera del gobierno de Kast</h1>
-          <p class="lede">Registro inicial con los cinco casos mas recientes. Cada caso enlaza a una fuente de prensa y queda listo para escalar cuando entre la base completa.</p>
+          <div class="issue-rule">
+            <span id="updatedLabel">Actualizado</span>
+            <span>Renuncias Tracker</span>
+          </div>
+          <div class="hero-copy">
+            <div class="big-number" id="totalCount">5</div>
+            <div>
+              <p class="eyebrow">Base Master</p>
+              <h1>autoridades fuera del gobierno de Kast</h1>
+              <p class="lede">Registro construido desde la pestaña Master de la base editorial. Cada salida conserva fuente, cargo, region y motivo editorial normalizado.</p>
+            </div>
+          </div>
         </div>
         <aside class="latest-card" aria-labelledby="latestTitle">
           <p class="eyebrow">Ultimo caso</p>
@@ -80,7 +84,7 @@
         <div class="section-head table-head">
           <div>
             <p class="eyebrow">Registro completo</p>
-            <h2>Primeros cinco casos</h2>
+            <h2>Registro Master</h2>
           </div>
           <label class="search">
             <span>Buscar</span>
@@ -95,7 +99,7 @@
       <div class="wrap">
         <p class="eyebrow">Metodologia</p>
         <h2>Que cuenta este tracker</h2>
-        <p>Incluye renuncias, remociones y nombramientos que no llegaron a concretarse. Este prototipo usa cinco casos para validar el formato publico; la version completa debe alimentarse desde la base terminada.</p>
+        <p>Incluye renuncias, remociones y nombramientos que no llegaron a concretarse. La base publica se genera desde la pestaña Master del archivo editorial, dejando fuera filas pendientes o marcadas para no contar.</p>
       </div>
     </section>
   </main>

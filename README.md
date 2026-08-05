@@ -2,7 +2,7 @@
 
 Sitio estatico de La Metafora para registrar renuncias, remociones y nombramientos no concretados del gobierno de Jose Antonio Kast.
 
-Este prototipo usa los cinco casos mas recientes del registro publico original. La version completa debe reemplazar `data/cases.json` con la base final.
+El sitio usa `data/cases.json`, generado desde la pestaña `Master` del archivo editorial `data/contador de renuncias, 1 de agosto.xlsm`.
 
 ## Publicacion
 
@@ -23,4 +23,10 @@ Para preservar anonimato operativo, los commits publicos deberian hacerse desde 
 
 ## Actualizar datos
 
-Editar `data/cases.json` y hacer commit. El sitio recalcula conteos, graficos y registro automaticamente.
+Actualizar la pestaña `Master` del `.xlsm`, ejecutar:
+
+```text
+python scripts/build_cases_from_master.py
+```
+
+Luego hacer commit de `data/cases.json` y de los cambios del sitio. El `.xlsm` no necesita publicarse.
