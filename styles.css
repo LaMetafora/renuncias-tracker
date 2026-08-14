@@ -466,6 +466,11 @@ h3 {
   stroke-dasharray: 8 8;
 }
 
+.projection-line-recent {
+  stroke: var(--navy-soft);
+  stroke-dasharray: 4 7;
+}
+
 .timeline-dot {
   fill: var(--danger);
   stroke: var(--sheet);
@@ -475,6 +480,12 @@ h3 {
 .projection-dot {
   fill: var(--sheet);
   stroke: var(--danger);
+  stroke-width: 2;
+}
+
+.projection-dot-recent {
+  fill: var(--sheet);
+  stroke: var(--navy-soft);
   stroke-width: 2;
 }
 
@@ -493,6 +504,11 @@ h3 {
 .projection-label {
   font-size: 11px;
   text-transform: uppercase;
+}
+
+.projection-value-recent,
+.projection-label-recent {
+  fill: var(--navy-soft);
 }
 
 .timeline-x-label,

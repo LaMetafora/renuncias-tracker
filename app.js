@@ -249,6 +249,7 @@ function renderProjectionChart(items) {
   const mandateEnd = dateFromISO(MANDATE_END);
   const observedWeeks = Math.max(metadata.government_weeks_elapsed || Math.floor(daysBetween(start, current) / 7) + 1, 1);
   const totalWeeks = Math.max(Math.floor(daysBetween(start, mandateEnd) / 7) + 1, observedWeeks);
+  const recentStartWeek = 13;
   const weeklyRate = items.length / observedWeeks;
   const projectedTotal = Math.round(weeklyRate * totalWeeks);
   const totalDays = Math.max(daysBetween(start, mandateEnd), 1);
@@ -283,6 +284,12 @@ function renderProjectionChart(items) {
   const projectedPoints = [
     { label: "Actual", start: current, end: current, count: 0, cumulative: items.length }
   ];
+  const recentWeeks = observedWeeksList.slice(recentStartWeek - 1);
+  const recentCount = recentWeeks.reduce((sum, week) => sum + week.count, 0);
+  const recentWeeklyRate = recentWeeks.length ? recentCount / recentWeeks.length : weeklyRate;
+  const recentProjectedPoints = [
+    { label: "Actual", start: current, end: current, count: 0, cumulative: items.length }
+  ];
 
   for (let index = observedWeeks; index < totalWeeks; index += 1) {
     const weekStart = addDays(start, index * 7);
@@ -295,21 +302,32 @@ function renderProjectionChart(items) {
       count: weeklyRate,
       cumulative: weeklyRate * (index + 1)
     });
+    recentProjectedPoints.push({
+      index,
+      label: `S${index + 1}`,
+      start: weekStart,
+      end: weekEnd > mandateEnd ? mandateEnd : weekEnd,
+      count: recentWeeklyRate,
+      cumulative: items.length + recentWeeklyRate * (index - observedWeeks + 1)
+    });
   }
+  const recentProjectedTotal = Math.round(recentProjectedPoints[recentProjectedPoints.length - 1].cumulative);
 
   const width = 720;
   const height = 280;
   const pad = { top: 18, right: 30, bottom: 44, left: 48 };
   const innerWidth = width - pad.left - pad.right;
   const innerHeight = height - pad.top - pad.bottom;
-  const maxValue = Math.max(projectedTotal, items.length, 1);
+  const maxValue = Math.max(projectedTotal, recentProjectedTotal, items.length, 1);
   const xForDate = (dateValue) => pad.left + (Math.min(Math.max(daysBetween(start, dateValue), 0), totalDays) / totalDays) * innerWidth;
   const xFor = (point) => xForDate(point.end);
   const yFor = (value) => pad.top + innerHeight - (value / maxValue) * innerHeight;
   const pathFor = (points) => points.map((point, index) => `${index === 0 ? "M" : "L"} ${xFor(point).toFixed(2)} ${yFor(point.cumulative).toFixed(2)}`).join(" ");
   const observedPath = pathFor(observedPoints);
   const projectedPath = pathFor(projectedPoints);
+  const recentProjectedPath = pathFor(recentProjectedPoints);
   const finalPoint = projectedPoints[projectedPoints.length - 1];
+  const recentFinalPoint = recentProjectedPoints[recentProjectedPoints.length - 1];
   const monthTicks = [];
   const monthCursor = new Date(start.getFullYear(), start.getMonth(), 1, 12);
   let monthIndex = 0;
@@ -324,7 +342,7 @@ function renderProjectionChart(items) {
     monthIndex += 1;
   }
 
-  els.timelineHint.dataset.projectionText = `Si todo sigue igual: ${projectedTotal.toLocaleString("es-CL")} renuncias al 11 de marzo de 2030`;
+  els.timelineHint.dataset.projectionText = `Si todo sigue igual: ${projectedTotal.toLocaleString("es-CL")} renuncias; ritmo S13+: ${recentProjectedTotal.toLocaleString("es-CL")} al 11 de marzo de 2030`;
   els.projectionChart.innerHTML = `
     <svg class="timeline-svg projection-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Proyección de renuncias acumuladas hasta el 11 de marzo de 2030">
       <title>Proyección de renuncias acumuladas hasta el 11 de marzo de 2030</title>
@@ -345,6 +363,7 @@ function renderProjectionChart(items) {
       `).join("")}
       <path class="timeline-line" d="${observedPath}"></path>
       <path class="timeline-line projection-line" d="${projectedPath}"></path>
+      <path class="timeline-line projection-line-recent" d="${recentProjectedPath}"></path>
       <circle class="timeline-dot" cx="${xFor(observedPoints[observedPoints.length - 1])}" cy="${yFor(items.length)}" r="4">
         <title>Actual: ${items.length} salidas al ${formatDate(currentISO)}</title>
       </circle>
@@ -353,6 +372,11 @@ function renderProjectionChart(items) {
       </circle>
       <text class="projection-value" x="${width - 48}" y="${Math.min(yFor(finalPoint.cumulative) + 42, pad.top + innerHeight - 28)}">${projectedTotal.toLocaleString("es-CL")}</text>
       <text class="projection-label" x="${width - 48}" y="${Math.min(yFor(finalPoint.cumulative) + 59, pad.top + innerHeight - 11)}">proyectadas</text>
+      <circle class="projection-dot-recent" cx="${xFor(recentFinalPoint)}" cy="${yFor(recentFinalPoint.cumulative)}" r="4">
+        <title>Proyección con ritmo S13+: ${recentProjectedTotal} salidas al 11 de marzo de 2030</title>
+      </circle>
+      <text class="projection-value projection-value-recent" x="${width - 48}" y="${Math.min(yFor(recentFinalPoint.cumulative) + 21, pad.top + innerHeight - 28)}">${recentProjectedTotal.toLocaleString("es-CL")}</text>
+      <text class="projection-label projection-label-recent" x="${width - 48}" y="${Math.min(yFor(recentFinalPoint.cumulative) + 38, pad.top + innerHeight - 11)}">S13+</text>
     </svg>
   `;
 }
