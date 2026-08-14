@@ -61,6 +61,8 @@ const els = {
   officeHint: document.querySelector("#officeHint"),
   caseList: document.querySelector("#caseList"),
   roleFilters: document.querySelector("#roleFilters"),
+  ministryFilter: document.querySelector("#ministryFilter"),
+  regionFilter: document.querySelector("#regionFilter"),
   searchInput: document.querySelector("#searchInput")
 };
 
@@ -199,6 +201,11 @@ function renderRegionMap(items) {
 function renderCases(items) {
   const ordered = sortByDateDesc(items);
 
+  if (ordered.length === 0) {
+    els.caseList.innerHTML = `<p class="empty-state">No hay casos para esta combinación de filtros.</p>`;
+    return;
+  }
+
   els.caseList.innerHTML = ordered.map((item) => `
     <article class="case-card" id="${escapeHtml(item.case_id)}">
       <div class="case-date">${formatDate(item.exit_date)}</div>
@@ -248,6 +255,24 @@ function updateRoleFilterState() {
   });
 }
 
+function populateRegistryFilters() {
+  const ministries = [...new Set(cases.map((item) => item.ministerio_master || item.ministry).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "es"));
+  const regions = [
+    "Gobierno central",
+    ...regionMapOrder.map(([region]) => region)
+  ];
+
+  els.ministryFilter.innerHTML = `
+    <option value="">Todos los ministerios</option>
+    ${ministries.map((ministry) => `<option value="${escapeHtml(ministry)}">${escapeHtml(ministry)}</option>`).join("")}
+  `;
+  els.regionFilter.innerHTML = `
+    <option value="">Todas las regiones y Gobierno central</option>
+    ${regions.map((region) => `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`).join("")}
+  `;
+}
+
 function sourceHref(item) {
   return item.source?.url || "";
 }
@@ -267,8 +292,18 @@ function sourceMarkup(item) {
 
 function renderFiltered() {
   const query = els.searchInput.value.trim().toLowerCase();
+  const ministryFilter = els.ministryFilter.value;
+  const regionFilter = els.regionFilter.value;
   const filtered = cases.filter((item) => {
     if (activeRoleFilter && roleFilterKey(item) !== activeRoleFilter) {
+      return false;
+    }
+
+    if (ministryFilter && (item.ministerio_master || item.ministry) !== ministryFilter) {
+      return false;
+    }
+
+    if (regionFilter && item.region_group !== regionFilter) {
       return false;
     }
 
@@ -330,11 +365,14 @@ async function boot() {
   renderBars(els.officeBars, byCount(cases, "ministerio_master"), {});
   renderRegionMap(cases);
   els.officeHint.textContent = `${cases.length} casos`;
+  populateRegistryFilters();
   updateRoleFilterCounts();
   updateRoleFilterState();
   renderCases(cases);
 
   els.searchInput.addEventListener("input", renderFiltered);
+  els.ministryFilter.addEventListener("change", renderFiltered);
+  els.regionFilter.addEventListener("change", renderFiltered);
   bindRoleFilters();
 }
 

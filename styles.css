@@ -68,6 +68,7 @@ a {
 .issue-rule,
 .nav,
 .role-filters,
+.select-field,
 .source-link,
 .footer-grid {
   font-family: "Space Mono", ui-monospace, monospace;
@@ -523,6 +524,36 @@ h3 {
   justify-items: end;
 }
 
+.registry-selects {
+  display: grid;
+  grid-template-columns: minmax(190px, 260px) minmax(190px, 260px);
+  gap: 10px;
+  justify-content: end;
+}
+
+.select-field {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.select-field span {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.select-field select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--rule);
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  padding: 9px 34px 9px 10px;
+}
+
 .role-filters {
   display: flex;
   flex-wrap: wrap;
@@ -589,6 +620,14 @@ h3 {
 .case-list {
   display: grid;
   gap: 10px;
+}
+
+.empty-state {
+  margin: 0;
+  padding: 18px;
+  background: rgba(255, 254, 250, 0.86);
+  border: 1px solid var(--rule);
+  color: var(--muted);
 }
 
 .case-card {
@@ -723,6 +762,11 @@ footer {
   .registry-tools {
     justify-items: stretch;
     width: 100%;
+  }
+
+  .registry-selects {
+    grid-template-columns: 1fr;
+    justify-content: stretch;
   }
 
   .role-filters {

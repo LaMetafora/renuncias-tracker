@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600;1,700&family=Libre+Baskerville:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=map-real-1">
+  <link rel="stylesheet" href="styles.css?v=registry-filters-1">
 </head>
 <body>
   <header class="site-head">
@@ -87,6 +87,20 @@
             <h2>El registro caso a caso</h2>
           </div>
           <div class="registry-tools">
+            <div class="registry-selects">
+              <label class="select-field">
+                <span>Ministerio</span>
+                <select id="ministryFilter">
+                  <option value="">Todos los ministerios</option>
+                </select>
+              </label>
+              <label class="select-field">
+                <span>Region</span>
+                <select id="regionFilter">
+                  <option value="">Todas las regiones y Gobierno central</option>
+                </select>
+              </label>
+            </div>
             <div class="role-filters" id="roleFilters" aria-label="Filtrar por cargo">
               <button type="button" data-role-filter="minister" aria-pressed="false">Ministros <span></span></button>
               <button type="button" data-role-filter="subsecretary" aria-pressed="false">Subsecretarios <span></span></button>
@@ -120,6 +134,6 @@
     </div>
   </footer>
 
-  <script src="app.js?v=map-real-1"></script>
+  <script src="app.js?v=registry-filters-1"></script>
 </body>
 </html>
