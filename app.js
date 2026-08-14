@@ -239,7 +239,7 @@ async function boot() {
   }
 
   renderStats(cases);
-  renderBars(els.officeBars, byCount(cases, "cargo_group"), {});
+  renderBars(els.officeBars, byCount(cases, "ministry"), {});
   renderBars(els.reasonBars, byCount(cases, "region_group"), {});
   els.officeHint.textContent = `${cases.length} casos`;
   updateRoleFilterCounts();
