@@ -52,7 +52,6 @@ const els = {
   updatedLabel: document.querySelector("#updatedLabel"),
   totalCount: document.querySelector("#totalCount"),
   paceFacts: document.querySelector("#paceFacts"),
-  paceNote: document.querySelector("#paceNote"),
   stats: document.querySelector("#stats"),
   chartTitle: document.querySelector("#chartTitle"),
   timelineChart: document.querySelector("#timelineChart"),
@@ -193,23 +192,30 @@ function renderPaceFacts(items) {
   const rate = metadata.resignations_per_week;
   const juneRate = juneWeeklyAverage(items);
   const zeroRun = longestZeroWeekRun(items);
-  const generalLabel = `${items.length}/${metadata.government_weeks_elapsed || "—"} semanas`;
-  const juneLabel = `${juneRate.count}/${juneRate.weeks || "—"} semanas`;
 
   els.paceFacts.innerHTML = [
-    ["Desde marzo", rate == null ? "—" : rate.toLocaleString("es-CL", { maximumFractionDigits: 2 }), generalLabel],
-    ["Desde junio", juneRate.average == null ? "—" : juneRate.average.toLocaleString("es-CL", { maximumFractionDigits: 2 }), juneLabel]
-  ].map(([label, value, detail]) => `
-    <div class="pace-fact">
+    {
+      value: rate == null ? "—" : rate.toLocaleString("es-CL", { maximumFractionDigits: 2 }),
+      label: "renuncias semanales",
+      detail: "desde marzo"
+    },
+    {
+      value: juneRate.average == null ? "—" : juneRate.average.toLocaleString("es-CL", { maximumFractionDigits: 2 }),
+      label: "renuncias semanales",
+      detail: "desde junio"
+    },
+    {
+      value: zeroRun.length || "—",
+      label: "semanas sin renuncias",
+      detail: "récord del periodo"
+    }
+  ].map(({ label, value, detail }) => `
+    <div class="pace-fact${detail === "récord del periodo" ? " pace-record" : ""}">
       <strong>${value}</strong>
       <span>${escapeHtml(label)}</span>
       <small>${escapeHtml(detail)}</small>
     </div>
   `).join("");
-
-  els.paceNote.textContent = zeroRun.length
-    ? `Récord sin salidas: ${zeroRun.length} semanas seguidas (${zeroRun.label}), en julio.`
-    : "Todavía no hay una semana sin salidas registradas.";
 }
 
 function ministerEvents(items) {
@@ -225,28 +231,19 @@ function ministerEvents(items) {
     .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
     .map(([date, eventItems]) => ({
       date,
-      label: eventItems.length > 1 ? "Cambio de gabinete" : "Cambio ministerial",
-      detail: eventItems.map((item) => item.person_name).join(" + ")
+      label: eventItems.length > 1
+        ? eventItems.map((item) => lastName(item.person_name)).join(" + ")
+        : `Renuncia ${lastName(eventItems[0].person_name)}`,
+      detail: eventItems.length > 1 ? "Cambio de gabinete" : ""
     }));
 }
 
-function zeroWeekRuns(weeks) {
-  const runs = [];
-  let current = [];
-  weeks.forEach((week) => {
-    if (week.count === 0) {
-      current.push(week);
-      return;
-    }
-    if (current.length) {
-      runs.push(current);
-    }
-    current = [];
-  });
-  if (current.length) {
-    runs.push(current);
-  }
-  return runs;
+function lastName(name) {
+  const parts = String(name || "").trim().split(/\s+/);
+  if (name.includes("Natalia Duco")) return "Duco";
+  if (name.includes("Mara Sedini")) return "Sedini";
+  if (name.includes("Trinidad Steinert")) return "Steinert";
+  return parts[parts.length - 1] || name;
 }
 
 function renderStats(items) {
@@ -334,7 +331,6 @@ function renderTimelineChart(items) {
     });
   }
   const events = ministerEvents(items).filter((event) => event.date >= startISO && event.date <= endISO);
-  const zeroRuns = zeroWeekRuns(weeks).filter((run) => run.length > 0);
 
   els.timelineHint.dataset.accumulatedText = `${items.length} casos · ${totalWeeks} semanas de gobierno`;
   els.timelineChart.innerHTML = `
@@ -355,25 +351,17 @@ function renderTimelineChart(items) {
           <text class="timeline-x-label" x="${xForDate(tick.date)}" y="${height - 12}">${tick.label}</text>
         </g>
       `).join("")}
-      ${zeroRuns.map((run) => {
-        const x1 = xForDate(run[0].start);
-        const x2 = xForDate(run[run.length - 1].end);
-        const labelX = x1 + Math.max((x2 - x1) / 2, 18);
-        return `
-          <rect class="zero-week-band" x="${x1}" y="${pad.top}" width="${Math.max(x2 - x1, 4)}" height="${innerHeight}"></rect>
-          <text class="zero-week-label" x="${labelX}" y="${pad.top + 16}">${run.length} semanas sin salidas</text>
-        `;
-      }).join("")}
       <path class="timeline-area" d="${areaPath}"></path>
       <path class="timeline-line" d="${linePath}"></path>
       ${events.map((event, index) => {
         const x = xForDate(dateFromISO(event.date));
         const y = pad.top + 26 + index * 24;
+        const labelX = Math.max(x - 8, pad.left + 96);
         return `
           <line class="minister-event-line" x1="${x}" y1="${pad.top}" x2="${x}" y2="${pad.top + innerHeight}"></line>
-          <text class="minister-event-label" x="${Math.min(x + 8, pad.left + innerWidth - 104)}" y="${y}">
+          <text class="minister-event-label" x="${labelX}" y="${y}">
             <tspan>${escapeHtml(event.label)}</tspan>
-            <tspan x="${Math.min(x + 8, pad.left + innerWidth - 104)}" dy="12">${escapeHtml(event.detail)}</tspan>
+            ${event.detail ? `<tspan x="${labelX}" dy="12">${escapeHtml(event.detail)}</tspan>` : ""}
           </text>
         `;
       }).join("")}
@@ -518,8 +506,8 @@ function renderProjectionChart(items) {
       <circle class="projection-dot" cx="${xFor(finalPoint)}" cy="${yFor(finalPoint.cumulative)}" r="5">
         <title>Proyección al 11 de marzo de 2030: ${projectedTotal} salidas</title>
       </circle>
-      <text class="projection-value" x="${width - 24}" y="${Math.min(yFor(finalPoint.cumulative) + 62, pad.top + innerHeight - 28)}">${projectedTotal.toLocaleString("es-CL")}</text>
-      <text class="projection-label" x="${width - 24}" y="${Math.min(yFor(finalPoint.cumulative) + 79, pad.top + innerHeight - 11)}">Proyección desde Marzo</text>
+      <text class="projection-value" x="${width - 24}" y="${Math.min(yFor(finalPoint.cumulative) + 48, pad.top + innerHeight - 28)}">${projectedTotal.toLocaleString("es-CL")}</text>
+      <text class="projection-label" x="${width - 24}" y="${Math.min(yFor(finalPoint.cumulative) + 65, pad.top + innerHeight - 11)}">Proyección desde Marzo</text>
       <circle class="projection-dot-recent" cx="${xFor(recentFinalPoint)}" cy="${yFor(recentFinalPoint.cumulative)}" r="4">
         <title>Proyección desde junio: ${recentProjectedTotal} salidas al 11 de marzo de 2030</title>
       </circle>
@@ -822,7 +810,7 @@ function bindRoleFilters() {
 
 async function boot() {
   const [response, geoResponse] = await Promise.all([
-    fetch("data/cases.json?v=2026-08-15-1"),
+    fetch("data/cases.json?v=noche-1"),
     fetch("assets/geo/chile-regions-paths.json")
   ]);
   const payload = await response.json();

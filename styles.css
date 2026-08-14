@@ -240,16 +240,17 @@ h3 {
 
 .pace-card {
   justify-content: flex-start;
+  gap: 12px;
 }
 
 .pace-card h2 {
-  margin-bottom: 0;
+  margin-bottom: 2px;
 }
 
 .pace-facts {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 6px;
 }
 
 .pace-fact {
@@ -261,7 +262,7 @@ h3 {
   display: block;
   color: var(--navy);
   font-family: "Cormorant Garamond", Georgia, serif;
-  font-size: 58px;
+  font-size: 52px;
   line-height: 0.9;
 }
 
@@ -285,12 +286,13 @@ h3 {
   font-size: 11px;
 }
 
-.pace-note {
-  margin: 0;
-  padding-top: 12px;
-  border-top: 1px solid rgba(7, 27, 61, 0.18);
-  font-size: 12px;
-  line-height: 1.5;
+.pace-record {
+  padding-top: 10px;
+  border-bottom: 0;
+}
+
+.pace-record strong {
+  color: var(--danger);
 }
 
 .source-link {
@@ -585,21 +587,11 @@ h3 {
   text-anchor: end;
 }
 
-.zero-week-band {
-  fill: rgba(95, 109, 134, 0.1);
-}
-
-.zero-week-label,
 .minister-event-label {
   font-family: "Space Mono", ui-monospace, monospace;
   font-weight: 700;
+  text-anchor: end;
   text-transform: uppercase;
-}
-
-.zero-week-label {
-  fill: var(--navy-soft);
-  font-size: 10px;
-  text-anchor: middle;
 }
 
 .minister-event-line {

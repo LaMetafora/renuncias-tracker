@@ -97,6 +97,21 @@ MINISTRY_ALIASES = {
 NEW_COUNT_STATUSES = {"confirmed_named"}
 EXCLUDED_PERSON_KEYS = {"marcelo araya"}
 EXCLUDED_CASE_IDS = {"pw-090-marcelo-araya"}
+PUBLIC_SUMMARY_OVERRIDES = {
+    "pw-045-patricio-ponce-arqueros": "CNN Chile confirmó la renuncia del seremi del Minvu en el Maule, en una seguidilla de bajas regionales del gobierno; la nota no detalla una causal pública.",
+    "pw-046-cristián-andrés-cabezas-mundaca": "La renuncia del seremi del Trabajo y Previsión Social de Tarapacá fue aceptada en el marco de nuevas bajas regionales; la nota disponible no informa un motivo específico.",
+    "pw-006-carlos-alfredo-pavez-tolosa": "El decreto oficial acepta la renuncia voluntaria del director de la Unidad de Análisis Financiero; no se informa una causal pública adicional.",
+    "pw-075-daniela-gallegos": "El medio regional reportó que su nombramiento como seremi de Economía en Atacama nunca llegó a concretarse.",
+    "pw-005-nathaly-álvarez": "La renuncia de la directora de Comunicaciones fue mencionada en la cobertura sobre la salida de la subsecretaria Daniela Castro.",
+    "pw-051-marcia-raphael": "Dejó la Seremi de Desarrollo Social y Familia de Aysén al pasar a ocupar la Subsecretaría de la Mujer y Equidad de Género.",
+    "pw-008-luz-maría-morán-ibáñez": "La salida de la directora del Hospital Clínico Herminda Martín fue reportada en medio de despidos de autoridades de salud y tensiones por la apertura del nuevo Hospital Regional de Ñuble.",
+    "pw-027-manahi-pakarati": "Dejó el servicio diplomático tras formalizar su renuncia, de acuerdo con la nota pública disponible.",
+    "pw-058-mario-sepúlveda": "La salida se registra a partir del nombramiento de Luis Calderón como nuevo seremi de Seguridad en La Araucanía; la publicación institucional no detalla causal.",
+    "pw-002-enrique-róman-gonzález": "El Presidente aceptó su renuncia como consejero de BancoEstado junto a la de otros integrantes del directorio.",
+    "pw-070-francisco-farías": "La salida se registra por la publicación que informa la llegada de Juan Pablo Carrasco a la Seremi del Trabajo en La Araucanía; no se detalla causal pública.",
+    "pw-060-renato-münster": "Renunció a la Seremi de las Culturas en la Región Metropolitana a menos de 24 horas de asumir, según la nota pública.",
+    "pw-074-alexander-nanjarí": "Su nombramiento como seremi de Educación del Biobío quedó sin efecto tras la polémica por publicaciones en redes sociales; Nanjarí dijo que fue sacado de contexto y acusó motivaciones políticas.",
+}
 SPANISH_MONTHS = {
     "enero": 1,
     "febrero": 2,
@@ -355,12 +370,19 @@ def reason_category(row: dict[str, Any], summary: str | None) -> str:
 
 
 def public_summary(row: dict[str, Any], *fallbacks: Any) -> str:
+    case_id = clean_text(row.get("master_id")) or clean_text(row.get("id"))
+    if case_id in PUBLIC_SUMMARY_OVERRIDES:
+        return PUBLIC_SUMMARY_OVERRIDES[case_id]
+
     generic = {
         "nombramiento sin efecto",
         "remocion",
         "renuncia",
         "renuncia no voluntaria",
         "renuncia solicitada",
+        "renuncia aceptada",
+        "renuncia voluntaria",
+        "sin clasificar",
     }
     candidates = [
         row.get("resumen_factiva"),
