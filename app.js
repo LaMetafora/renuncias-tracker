@@ -205,14 +205,13 @@ function renderFiltered() {
 }
 
 function bindRoleFilters() {
-  els.roleFilters.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-role-filter]");
-    if (!button) return;
-
-    const nextFilter = button.dataset.roleFilter;
-    activeRoleFilter = activeRoleFilter === nextFilter ? "" : nextFilter;
-    updateRoleFilterState();
-    renderFiltered();
+  els.roleFilters.querySelectorAll("button[data-role-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextFilter = button.dataset.roleFilter;
+      activeRoleFilter = activeRoleFilter === nextFilter ? "" : nextFilter;
+      updateRoleFilterState();
+      renderFiltered();
+    });
   });
 }
 
