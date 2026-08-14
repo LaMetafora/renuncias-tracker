@@ -4,7 +4,7 @@ import json
 import re
 import unicodedata
 from collections import Counter
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -16,24 +16,6 @@ WORKBOOK_PATTERN = "contador de renuncias,*"
 OUTPUT = ROOT / "data" / "cases.json"
 SOURCE_OVERRIDES = ROOT / "data" / "source_overrides.json"
 GOVERNMENT_START = date(2026, 3, 11)
-CHILE_HOLIDAYS_2026 = {
-    date(2026, 1, 1),
-    date(2026, 4, 3),
-    date(2026, 4, 4),
-    date(2026, 5, 1),
-    date(2026, 5, 21),
-    date(2026, 6, 21),
-    date(2026, 6, 29),
-    date(2026, 7, 16),
-    date(2026, 8, 15),
-    date(2026, 9, 18),
-    date(2026, 9, 19),
-    date(2026, 10, 12),
-    date(2026, 10, 31),
-    date(2026, 11, 1),
-    date(2026, 12, 8),
-    date(2026, 12, 25),
-}
 
 INCLUDE_RECOMMENDATIONS = {
     "add_to_core_counter",
@@ -295,16 +277,10 @@ def updated_at_from_summary(wb: Any, fallback: date) -> str:
     return fallback.isoformat()
 
 
-def business_days_inclusive(start: date, end: date) -> int:
+def government_weeks_elapsed(start: date, end: date) -> int:
     if end < start:
         return 0
-    days = 0
-    current = start
-    while current <= end:
-        if current.weekday() < 5 and current not in CHILE_HOLIDAYS_2026:
-            days += 1
-        current += timedelta(days=1)
-    return days
+    return ((end - start).days // 7) + 1
 
 
 def reason_category(row: dict[str, Any], summary: str | None) -> str:
@@ -479,8 +455,8 @@ def build() -> dict[str, Any]:
     region_counts = Counter(item["region_group"] for item in cases)
     updated_at = updated_at_from_summary(wb, max((datetime.fromisoformat(item["exit_date"]).date() for item in cases if item.get("exit_date")), default=date.today()))
     updated_date = datetime.fromisoformat(updated_at).date()
-    business_days = business_days_inclusive(GOVERNMENT_START, updated_date)
-    resignations_per_business_day = round(len(cases) / business_days, 3) if business_days else None
+    weeks_elapsed = government_weeks_elapsed(GOVERNMENT_START, updated_date)
+    resignations_per_week = round(len(cases) / weeks_elapsed, 3) if weeks_elapsed else None
     return {
         "metadata": {
             "title": "Renuncias Tracker",
@@ -494,9 +470,9 @@ def build() -> dict[str, Any]:
             "ministry_counts": dict(ministry_counts),
             "region_counts": dict(region_counts),
             "government_start": GOVERNMENT_START.isoformat(),
-            "business_days_elapsed": business_days,
-            "business_day_basis": "Lunes a viernes, excluyendo feriados nacionales de Chile.",
-            "resignations_per_business_day": resignations_per_business_day,
+            "government_weeks_elapsed": weeks_elapsed,
+            "week_basis": "Semanas corridas de gobierno desde el 11 de marzo de 2026, incluyendo la semana parcial en curso.",
+            "resignations_per_week": resignations_per_week,
         },
         "cases": cases,
     }

@@ -401,22 +401,14 @@ h3 {
   stroke-width: 1;
 }
 
-.timeline-area {
-  fill: rgba(95, 109, 134, 0.18);
+.timeline-bar {
+  fill: var(--navy);
+  opacity: 0.9;
 }
 
-.timeline-line {
-  fill: none;
-  stroke: var(--navy);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 3;
-}
-
-.timeline-dot {
+.timeline-bar:hover {
   fill: var(--danger);
-  stroke: var(--sheet);
-  stroke-width: 1.4;
+  opacity: 1;
 }
 
 .timeline-x-label,

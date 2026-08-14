@@ -64,9 +64,9 @@
       "Los Ríos": 5
     },
     "government_start": "2026-03-11",
-    "business_days_elapsed": 108,
-    "business_day_basis": "Lunes a viernes, excluyendo feriados nacionales de Chile.",
-    "resignations_per_business_day": 0.741
+    "government_weeks_elapsed": 23,
+    "week_basis": "Semanas corridas de gobierno desde el 11 de marzo de 2026, incluyendo la semana parcial en curso.",
+    "resignations_per_week": 3.478
   },
   "cases": [
     {
