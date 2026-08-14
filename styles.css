@@ -22,13 +22,12 @@ html {
 body {
   margin: 0;
   background:
-    linear-gradient(rgba(247, 246, 241, 0.93), rgba(247, 246, 241, 0.93)),
-    url("assets/nuevo/seamless_test/M_pattern_seamless_tile.png"),
+    url("assets/nuevo/seamless_test/M_pattern_seamless_transparent.png"),
     radial-gradient(circle at 18px 18px, rgba(7, 27, 61, 0.07) 1px, transparent 1.5px),
     linear-gradient(90deg, rgba(7, 27, 61, 0.045) 1px, transparent 1px),
     linear-gradient(180deg, rgba(7, 27, 61, 0.04) 1px, transparent 1px),
     var(--paper);
-  background-size: auto, 305px 476px, 22px 22px, 44px 44px, 44px 44px;
+  background-size: 305px 476px, 22px 22px, 44px 44px, 44px 44px;
   color: var(--ink);
   font-family: "Libre Baskerville", Georgia, serif;
   line-height: 1.45;
@@ -131,9 +130,9 @@ a {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: repeating-linear-gradient(115deg, transparent 0 64px, rgba(7, 27, 61, 0.055) 64px 66px), url("assets/nuevo/seamless_test/M_pattern_seamless_tile.png");
-  background-size: auto, 244px 381px;
-  opacity: 0.22;
+  background-image: url("assets/nuevo/seamless_test/M_pattern_seamless_transparent.png");
+  background-size: 244px 381px;
+  opacity: 0.18;
   pointer-events: none;
 }
 
