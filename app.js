@@ -571,6 +571,7 @@ function renderBars(container, counts, labels) {
 }
 
 function ministryShortLabel(name) {
+  if (name === "Ministerio Secretaría General de Gobierno") return "SEGEGOB";
   return name.replace(/^Ministerio (de las|de la|del|de|Secretaría General de) /, "");
 }
 
