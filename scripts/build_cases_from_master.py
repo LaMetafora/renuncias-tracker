@@ -28,6 +28,66 @@ EXCLUDE_RECOMMENDATIONS = {
     "pending_or_paused",
 }
 
+VALID_CHILE_MINISTRIES = {
+    "Ministerio del Interior",
+    "Ministerio de Relaciones Exteriores",
+    "Ministerio de Defensa Nacional",
+    "Ministerio de Hacienda",
+    "Ministerio Secretaría General de la Presidencia",
+    "Ministerio Secretaría General de Gobierno",
+    "Ministerio de Economía, Fomento y Turismo",
+    "Ministerio de Desarrollo Social y Familia",
+    "Ministerio de Educación",
+    "Ministerio de Justicia y Derechos Humanos",
+    "Ministerio del Trabajo y Previsión Social",
+    "Ministerio de Obras Públicas",
+    "Ministerio de Salud",
+    "Ministerio de Vivienda y Urbanismo",
+    "Ministerio de Agricultura",
+    "Ministerio de Minería",
+    "Ministerio de Transportes y Telecomunicaciones",
+    "Ministerio de Bienes Nacionales",
+    "Ministerio de Energía",
+    "Ministerio del Medio Ambiente",
+    "Ministerio del Deporte",
+    "Ministerio de la Mujer y la Equidad de Género",
+    "Ministerio de las Culturas, las Artes y el Patrimonio",
+    "Ministerio de Ciencia, Tecnología, Conocimiento e Innovación",
+    "Ministerio de Seguridad Pública",
+}
+
+MINISTRY_ALIASES = {
+    "agricultura": "Ministerio de Agricultura",
+    "bienes nacionales": "Ministerio de Bienes Nacionales",
+    "ciencia": "Ministerio de Ciencia, Tecnología, Conocimiento e Innovación",
+    "ciencia tecnologia conocimiento e innovacion": "Ministerio de Ciencia, Tecnología, Conocimiento e Innovación",
+    "culturas": "Ministerio de las Culturas, las Artes y el Patrimonio",
+    "culturas artes y patrimonio": "Ministerio de las Culturas, las Artes y el Patrimonio",
+    "culturas las artes y el patrimonio": "Ministerio de las Culturas, las Artes y el Patrimonio",
+    "desarrollo social y familia": "Ministerio de Desarrollo Social y Familia",
+    "desarrollo social y familia mujer y equidad de genero": "Ministerio de Desarrollo Social y Familia",
+    "economia": "Ministerio de Economía, Fomento y Turismo",
+    "economia fomento y turismo": "Ministerio de Economía, Fomento y Turismo",
+    "economia y mineria": "Ministerio de Economía, Fomento y Turismo",
+    "educacion": "Ministerio de Educación",
+    "energia": "Ministerio de Energía",
+    "hacienda": "Ministerio de Hacienda",
+    "interior": "Ministerio del Interior",
+    "justicia y derechos humanos": "Ministerio de Justicia y Derechos Humanos",
+    "medio ambiente": "Ministerio del Medio Ambiente",
+    "mineria": "Ministerio de Minería",
+    "mujer y equidad de genero": "Ministerio de la Mujer y la Equidad de Género",
+    "obras publicas": "Ministerio de Obras Públicas",
+    "salud": "Ministerio de Salud",
+    "secretaria general de gobierno": "Ministerio Secretaría General de Gobierno",
+    "seguridad": "Ministerio de Seguridad Pública",
+    "seguridad publica": "Ministerio de Seguridad Pública",
+    "trabajo": "Ministerio del Trabajo y Previsión Social",
+    "trabajo y prevision social": "Ministerio del Trabajo y Previsión Social",
+    "transportes y telecomunicaciones": "Ministerio de Transportes y Telecomunicaciones",
+    "vivienda y urbanismo": "Ministerio de Vivienda y Urbanismo",
+}
+
 
 def strip_accents(value: str) -> str:
     return "".join(
@@ -104,6 +164,22 @@ def slugify(value: str | None) -> str:
     text = strip_accents((value or "otros cargos").lower())
     text = re.sub(r"[^a-z0-9]+", "_", text).strip("_")
     return text or "otros_cargos"
+
+
+def normalize_lookup_key(value: str | None) -> str:
+    text = strip_accents((value or "").lower())
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def ministry_from_master(row: dict[str, Any]) -> str:
+    raw = clean_text(row.get("ministerio_master"))
+    key = normalize_lookup_key(raw)
+    ministry = MINISTRY_ALIASES.get(key)
+    if ministry not in VALID_CHILE_MINISTRIES:
+        case_id = clean_text(row.get("master_id")) or "sin_id"
+        raise ValueError(f"Ministerio master invalido en {case_id}: {raw!r}")
+    return ministry
 
 
 def region_group(value: str) -> str:
@@ -199,6 +275,7 @@ def build() -> dict[str, Any]:
         raw_cargo = clean_text(row.get("cargo_master")) or clean_text(row.get("cargo"))
         cargo_group = clean_text(row.get("cargo")) or raw_cargo or "Otros cargos"
         region = clean_text(row.get("region_master")) or "Nacional"
+        ministry_master = ministry_from_master(row)
         case = {
             "case_id": clean_text(row.get("master_id")),
             "person_name": name,
@@ -206,7 +283,8 @@ def build() -> dict[str, Any]:
             "cargo_group": cargo_group,
             "cargo_group_key": slugify(cargo_group),
             "office_title": raw_cargo,
-            "ministry": clean_text(row.get("ministerio_master")),
+            "ministerio_master": ministry_master,
+            "ministry": ministry_master,
             "territory_type": "national" if region == "Nacional" else "regional",
             "region": region,
             "region_group": region_group(region),
@@ -225,6 +303,7 @@ def build() -> dict[str, Any]:
     cases.sort(key=lambda item: item.get("exit_date") or "1900-01-01", reverse=True)
     office_counts = Counter(item["office_level"] for item in cases)
     cargo_counts = Counter(item["cargo_group"] for item in cases)
+    ministry_counts = Counter(item["ministerio_master"] for item in cases)
     region_counts = Counter(item["region_group"] for item in cases)
     return {
         "metadata": {
@@ -238,6 +317,7 @@ def build() -> dict[str, Any]:
             ),
             "office_counts": dict(office_counts),
             "cargo_counts": dict(cargo_counts),
+            "ministry_counts": dict(ministry_counts),
             "region_counts": dict(region_counts),
         },
         "cases": cases,

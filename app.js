@@ -120,7 +120,7 @@ function renderCases(items) {
       <div class="case-date">${formatDate(item.exit_date)}</div>
       <div>
         <h3>${escapeHtml(item.person_name)}</h3>
-        <div class="case-meta">${escapeHtml(item.office_title)} · ${escapeHtml(item.ministry)} · ${escapeHtml(item.region)}</div>
+        <div class="case-meta">${escapeHtml(item.office_title)} · ${escapeHtml(item.ministerio_master || item.ministry)} · ${escapeHtml(item.region)}</div>
         <p class="case-reason">${escapeHtml(item.reason_summary)}</p>
       </div>
       <div class="badge-row">
@@ -191,7 +191,7 @@ function renderFiltered() {
     const haystack = [
       item.person_name,
       item.office_title,
-      item.ministry,
+      item.ministerio_master || item.ministry,
       item.region,
       item.reason_summary,
       item.source?.outlet,
@@ -239,7 +239,7 @@ async function boot() {
   }
 
   renderStats(cases);
-  renderBars(els.officeBars, byCount(cases, "ministry"), {});
+  renderBars(els.officeBars, byCount(cases, "ministerio_master"), {});
   renderBars(els.reasonBars, byCount(cases, "region_group"), {});
   els.officeHint.textContent = `${cases.length} casos`;
   updateRoleFilterCounts();
