@@ -615,8 +615,8 @@ function groupedMinistryCounts(items) {
   });
 
   const entries = [...buckets.values()].sort((a, b) => b.allTotal - a.allTotal || a.key.localeCompare(b.key, "es"));
-  const visible = entries.filter((entry) => entry.allTotal > MINISTRY_VISIBLE_THRESHOLD);
-  const hidden = entries.filter((entry) => entry.allTotal <= MINISTRY_VISIBLE_THRESHOLD);
+  const visible = entries.filter((entry) => entry.allTotal >= MINISTRY_VISIBLE_THRESHOLD);
+  const hidden = entries.filter((entry) => entry.allTotal < MINISTRY_VISIBLE_THRESHOLD);
   const otherSegments = hidden.reduce((acc, entry) => addRoleCounts(acc, entry.segments), emptyRoleCounts());
   const otherTotal = activeRoleTotal(otherSegments, activeRoles);
   const rows = visible
@@ -627,16 +627,6 @@ function groupedMinistryCounts(items) {
     }))
     .filter((entry) => entry.activeTotal > 0);
 
-  if (otherTotal > 0) {
-    rows.push({
-      key: OTHER_MINISTRIES_LABEL,
-      allTotal: hidden.reduce((sum, entry) => sum + entry.allTotal, 0),
-      activeTotal: otherTotal,
-      segments: otherSegments,
-      isOther: true
-    });
-  }
-
   const hiddenRows = hidden
     .map((entry) => ({
       ...entry,
@@ -646,7 +636,7 @@ function groupedMinistryCounts(items) {
     .filter((entry) => entry.activeTotal > 0)
     .sort((a, b) => b.activeTotal - a.activeTotal || a.key.localeCompare(b.key, "es"));
 
-  return { rows, hidden: hiddenRows, expanded: ministriesExpanded && hiddenRows.length > 0, activeRoles };
+  return { rows, hidden: hiddenRows, otherTotal, expanded: ministriesExpanded && hiddenRows.length > 0, activeRoles };
 }
 
 function ministryRoleControls() {
@@ -682,24 +672,28 @@ function segmentedBar(row, max, activeRoles) {
 }
 
 function renderMinistryBars(items) {
-  const { rows, hidden, expanded, activeRoles } = groupedMinistryCounts(items);
+  const { rows, hidden, otherTotal, expanded, activeRoles } = groupedMinistryCounts(items);
   const visibleMax = Math.max(...rows.map((entry) => entry.activeTotal), 1);
   const hiddenMax = Math.max(...hidden.map((entry) => entry.activeTotal), 1);
 
   const rowMarkup = rows.map((row) => {
-    const isOther = row.isOther;
     return `
-      <div class="bar-row ${isOther ? "bar-row-toggle" : ""}">
-        <${isOther ? "button" : "div"} class="bar-label ${isOther ? "bar-toggle" : ""}" ${isOther ? `type="button" aria-expanded="${expanded}" data-ministry-toggle="others"` : ""}>
-          ${escapeHtml(isOther ? `${row.key} ${expanded ? "−" : "+"}` : ministryShortLabel(row.key))}
-        </${isOther ? "button" : "div"}>
+      <div class="bar-row">
+        <div class="bar-label">${escapeHtml(ministryShortLabel(row.key))}</div>
         ${segmentedBar(row, visibleMax, activeRoles)}
         <div class="bar-count">${row.activeTotal}</div>
       </div>
     `;
   }).join("");
 
-  els.officeBars.innerHTML = ministryRoleControls() + (rowMarkup || `<p class="empty-state">No hay casos para los cargos seleccionados.</p>`) + (expanded ? `
+  const otherToggle = otherTotal > 0 ? `
+    <button class="bar-toggle bar-other-toggle" type="button" aria-expanded="${expanded}" data-ministry-toggle="others">
+      ${escapeHtml(`${OTHER_MINISTRIES_LABEL} ${expanded ? "−" : "+"}`)}
+      <span>${otherTotal}</span>
+    </button>
+  ` : "";
+
+  els.officeBars.innerHTML = ministryRoleControls() + (rowMarkup || `<p class="empty-state">No hay casos para los cargos seleccionados.</p>`) + otherToggle + (expanded ? `
     <div class="bar-sublist">
       ${hidden.map((row) => `
         <div class="bar-row bar-row-sub">
@@ -986,7 +980,7 @@ async function boot() {
   setChartMode("accumulated");
   renderMinistryBars(cases);
   renderRegionMap(cases);
-  els.officeHint.textContent = `Ministerios con más de ${MINISTRY_VISIBLE_THRESHOLD} casos`;
+  els.officeHint.textContent = `Ministerios con ${MINISTRY_VISIBLE_THRESHOLD} o más casos`;
   populateRegistryFilters();
   updateRoleFilterCounts();
   updateRoleFilterState();

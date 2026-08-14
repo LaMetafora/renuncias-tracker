@@ -508,8 +508,27 @@ h3 {
   text-align: left;
 }
 
-.bar-row-toggle .bar-fill {
-  background: var(--danger);
+.bar-other-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  padding: 9px 11px;
+  border: 1px solid rgba(182, 32, 45, 0.38);
+  color: var(--danger);
+  font-family: "Space Mono", ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.bar-other-toggle:hover {
+  background: rgba(182, 32, 45, 0.08);
+}
+
+.bar-other-toggle span {
+  color: var(--navy);
 }
 
 .bar-sublist {
