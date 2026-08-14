@@ -75,12 +75,19 @@ let regionGeo = null;
 let activeRoleFilter = "";
 let selectedRegion = "";
 let ministriesExpanded = false;
+let selectedMinistryRoles = new Set();
 
 const MANDATE_END = "2030-03-11";
 const JUNE_PROJECTION_START_WEEK = 13;
 const JUNE_PROJECTION_END_WEEK = 22;
 const MINISTRY_VISIBLE_THRESHOLD = 5;
 const OTHER_MINISTRIES_LABEL = "Otros Ministerios";
+const ministryRoleOptions = [
+  { key: "minister", label: "Ministras" },
+  { key: "subsecretary", label: "Subsecretarios" },
+  { key: "seremi", label: "Seremis" },
+  { key: "other", label: "Otros cargos" }
+];
 
 function byCount(items, key) {
   return items.reduce((acc, item) => {
@@ -567,46 +574,138 @@ function ministryShortLabel(name) {
   return name.replace(/^Ministerio (de las|de la|del|de|Secretaría General de) /, "");
 }
 
-function groupedMinistryCounts(items) {
-  const entries = Object.entries(byCount(items, "ministerio_master"))
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"));
-  const visible = entries.filter(([, value]) => value > MINISTRY_VISIBLE_THRESHOLD);
-  const hidden = entries.filter(([, value]) => value <= MINISTRY_VISIBLE_THRESHOLD);
-  const otherTotal = hidden.reduce((sum, [, value]) => sum + value, 0);
-  const rows = otherTotal
-    ? [...visible, [OTHER_MINISTRIES_LABEL, otherTotal]]
-    : visible;
+function activeMinistryRoleKeys() {
+  return selectedMinistryRoles.size
+    ? ministryRoleOptions.map((option) => option.key).filter((key) => selectedMinistryRoles.has(key))
+    : ministryRoleOptions.map((option) => option.key);
+}
 
-  return { rows, hidden, expanded: ministriesExpanded && hidden.length > 0 };
+function emptyRoleCounts() {
+  return Object.fromEntries(ministryRoleOptions.map((option) => [option.key, 0]));
+}
+
+function addRoleCounts(target, source) {
+  ministryRoleOptions.forEach(({ key }) => {
+    target[key] = (target[key] || 0) + (source[key] || 0);
+  });
+  return target;
+}
+
+function activeRoleTotal(segments, activeRoles) {
+  return activeRoles.reduce((sum, role) => sum + (segments[role] || 0), 0);
+}
+
+function groupedMinistryCounts(items) {
+  const activeRoles = activeMinistryRoleKeys();
+  const buckets = new Map();
+
+  items.forEach((item) => {
+    const ministry = item.ministerio_master || item.ministry || "Sin ministerio";
+    const role = roleFilterKey(item);
+    if (!buckets.has(ministry)) {
+      buckets.set(ministry, {
+        key: ministry,
+        allTotal: 0,
+        segments: emptyRoleCounts()
+      });
+    }
+    const bucket = buckets.get(ministry);
+    bucket.allTotal += 1;
+    bucket.segments[role] = (bucket.segments[role] || 0) + 1;
+  });
+
+  const entries = [...buckets.values()].sort((a, b) => b.allTotal - a.allTotal || a.key.localeCompare(b.key, "es"));
+  const visible = entries.filter((entry) => entry.allTotal > MINISTRY_VISIBLE_THRESHOLD);
+  const hidden = entries.filter((entry) => entry.allTotal <= MINISTRY_VISIBLE_THRESHOLD);
+  const otherSegments = hidden.reduce((acc, entry) => addRoleCounts(acc, entry.segments), emptyRoleCounts());
+  const otherTotal = activeRoleTotal(otherSegments, activeRoles);
+  const rows = visible
+    .map((entry) => ({
+      ...entry,
+      activeTotal: activeRoleTotal(entry.segments, activeRoles),
+      isOther: false
+    }))
+    .filter((entry) => entry.activeTotal > 0);
+
+  if (otherTotal > 0) {
+    rows.push({
+      key: OTHER_MINISTRIES_LABEL,
+      allTotal: hidden.reduce((sum, entry) => sum + entry.allTotal, 0),
+      activeTotal: otherTotal,
+      segments: otherSegments,
+      isOther: true
+    });
+  }
+
+  const hiddenRows = hidden
+    .map((entry) => ({
+      ...entry,
+      activeTotal: activeRoleTotal(entry.segments, activeRoles),
+      isOther: false
+    }))
+    .filter((entry) => entry.activeTotal > 0)
+    .sort((a, b) => b.activeTotal - a.activeTotal || a.key.localeCompare(b.key, "es"));
+
+  return { rows, hidden: hiddenRows, expanded: ministriesExpanded && hiddenRows.length > 0, activeRoles };
+}
+
+function ministryRoleControls() {
+  return `
+    <div class="ministry-controls" aria-label="Filtrar gráfico por cargo">
+      <button type="button" class="${selectedMinistryRoles.size === 0 ? "is-active" : ""}" data-ministry-role="all" aria-pressed="${selectedMinistryRoles.size === 0 ? "true" : "false"}" title="Mostrar todos los cargos">
+        Restablecer
+      </button>
+      ${ministryRoleOptions.map(({ key, label }) => `
+        <button type="button" class="${selectedMinistryRoles.has(key) ? "is-active" : ""}" data-ministry-role="${escapeHtml(key)}" aria-pressed="${selectedMinistryRoles.has(key) ? "true" : "false"}">
+          <span class="role-dot role-${escapeHtml(key)}"></span>${escapeHtml(label)}
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function segmentedBar(row, max, activeRoles) {
+  const width = max ? (row.activeTotal / max) * 100 : 0;
+  const segments = activeRoles
+    .map((role) => ({ role, value: row.segments[role] || 0 }))
+    .filter((segment) => segment.value > 0);
+
+  return `
+    <div class="bar-track" aria-hidden="true">
+      <div class="bar-stack" style="width:${width}%">
+        ${segments.map(({ role, value }) => `
+          <span class="bar-segment role-${escapeHtml(role)}" style="flex:${value}" title="${escapeHtml(value)}"></span>
+        `).join("")}
+      </div>
+    </div>
+  `;
 }
 
 function renderMinistryBars(items) {
-  const { rows, hidden, expanded } = groupedMinistryCounts(items);
-  const visibleMax = Math.max(...rows.map((entry) => entry[1]), 1);
-  const hiddenMax = Math.max(...hidden.map((entry) => entry[1]), 1);
+  const { rows, hidden, expanded, activeRoles } = groupedMinistryCounts(items);
+  const visibleMax = Math.max(...rows.map((entry) => entry.activeTotal), 1);
+  const hiddenMax = Math.max(...hidden.map((entry) => entry.activeTotal), 1);
 
-  els.officeBars.innerHTML = rows.map(([key, value]) => {
-    const isOther = key === OTHER_MINISTRIES_LABEL;
+  const rowMarkup = rows.map((row) => {
+    const isOther = row.isOther;
     return `
       <div class="bar-row ${isOther ? "bar-row-toggle" : ""}">
         <${isOther ? "button" : "div"} class="bar-label ${isOther ? "bar-toggle" : ""}" ${isOther ? `type="button" aria-expanded="${expanded}" data-ministry-toggle="others"` : ""}>
-          ${escapeHtml(isOther ? `${key} ${expanded ? "−" : "+"}` : ministryShortLabel(key))}
+          ${escapeHtml(isOther ? `${row.key} ${expanded ? "−" : "+"}` : ministryShortLabel(row.key))}
         </${isOther ? "button" : "div"}>
-        <div class="bar-track" aria-hidden="true">
-          <div class="bar-fill" style="width:${(value / visibleMax) * 100}%"></div>
-        </div>
-        <div class="bar-count">${value}</div>
+        ${segmentedBar(row, visibleMax, activeRoles)}
+        <div class="bar-count">${row.activeTotal}</div>
       </div>
     `;
-  }).join("") + (expanded ? `
+  }).join("");
+
+  els.officeBars.innerHTML = ministryRoleControls() + (rowMarkup || `<p class="empty-state">No hay casos para los cargos seleccionados.</p>`) + (expanded ? `
     <div class="bar-sublist">
-      ${hidden.map(([key, value]) => `
+      ${hidden.map((row) => `
         <div class="bar-row bar-row-sub">
-          <div class="bar-label">${escapeHtml(ministryShortLabel(key))}</div>
-          <div class="bar-track" aria-hidden="true">
-            <div class="bar-fill" style="width:${(value / hiddenMax) * 100}%"></div>
-          </div>
-          <div class="bar-count">${value}</div>
+          <div class="bar-label">${escapeHtml(ministryShortLabel(row.key))}</div>
+          ${segmentedBar(row, hiddenMax, activeRoles)}
+          <div class="bar-count">${row.activeTotal}</div>
         </div>
       `).join("")}
     </div>
@@ -897,6 +996,20 @@ async function boot() {
   els.ministryFilter.addEventListener("change", renderFiltered);
   els.regionFilter.addEventListener("change", renderFiltered);
   els.officeBars.addEventListener("click", (event) => {
+    const roleButton = event.target.closest("[data-ministry-role]");
+    if (roleButton) {
+      const role = roleButton.dataset.ministryRole;
+      if (role === "all") {
+        selectedMinistryRoles.clear();
+      } else if (selectedMinistryRoles.has(role)) {
+        selectedMinistryRoles.delete(role);
+      } else {
+        selectedMinistryRoles.add(role);
+      }
+      renderMinistryBars(cases);
+      return;
+    }
+
     const toggle = event.target.closest("[data-ministry-toggle='others']");
     if (!toggle) return;
     ministriesExpanded = !ministriesExpanded;

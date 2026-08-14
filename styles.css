@@ -9,6 +9,8 @@
   --hairline: #0d1f3d;
   --wash: #edf1f5;
   --danger: #b6202d;
+  --role-seremi: #228b67;
+  --role-other: #b73089;
 }
 
 * {
@@ -445,6 +447,42 @@ h3 {
   gap: 12px;
 }
 
+.ministry-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.ministry-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 7px 9px;
+  background: rgba(255, 254, 250, 0.92);
+  border: 1px solid var(--rule);
+  color: var(--navy);
+  cursor: pointer;
+  font-family: "Space Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ministry-controls button:hover,
+.ministry-controls button.is-active {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: white;
+}
+
+.role-dot {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+}
+
 .bar-row {
   display: grid;
   grid-template-columns: minmax(150px, 220px) minmax(80px, 1fr) 32px;
@@ -504,6 +542,37 @@ h3 {
 .bar-fill {
   height: 100%;
   background: var(--navy-soft);
+}
+
+.bar-stack {
+  display: flex;
+  height: 100%;
+  min-width: 2px;
+}
+
+.bar-segment {
+  display: block;
+  height: 100%;
+}
+
+.bar-segment + .bar-segment {
+  border-left: 1px solid rgba(255, 254, 250, 0.82);
+}
+
+.role-minister {
+  background: var(--danger);
+}
+
+.role-subsecretary {
+  background: var(--navy);
+}
+
+.role-seremi {
+  background: var(--role-seremi);
+}
+
+.role-other {
+  background: var(--role-other);
 }
 
 .bar-count {
