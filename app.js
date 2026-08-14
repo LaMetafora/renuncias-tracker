@@ -249,12 +249,17 @@ function lastName(name) {
 function renderStats(items) {
   const offices = byCount(items, "office_level");
   const cargos = byCount(items, "cargo_group");
+  const ministerCount = cargos["Ministro/a"] ?? offices.minister ?? 0;
+  const subsecretaryCount = cargos["Subsecretario/a"] ?? offices.subsecretary ?? 0;
+  const seremiCount = metadata.seremi_count ?? offices.seremi ?? 0;
+  const otherCount = Math.max(items.length - ministerCount - subsecretaryCount - seremiCount, 0);
 
   const stats = [
     ["Casos registrados", items.length],
-    ["Ministros", cargos["Ministro/a"] ?? offices.minister ?? 0],
-    ["Subsecretarios", cargos["Subsecretario/a"] ?? offices.subsecretary ?? 0],
-    ["Seremis", metadata.seremi_count ?? offices.seremi ?? 0]
+    ["Ministros", ministerCount],
+    ["Subsecretarios", subsecretaryCount],
+    ["Seremis", seremiCount],
+    ["Otros cargos", otherCount]
   ];
 
   els.stats.innerHTML = stats.map(([label, value]) => `
