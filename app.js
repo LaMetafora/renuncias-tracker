@@ -147,6 +147,7 @@ function renderTimelineChart(items) {
   const endISO = metadata.updated_at || items[0]?.exit_date || startISO;
   const start = dateFromISO(startISO);
   const end = dateFromISO(endISO);
+  const totalDays = Math.max(daysBetween(start, end), 1);
   const totalWeeks = Math.max(metadata.government_weeks_elapsed || Math.floor(daysBetween(start, end) / 7) + 1, 1);
   const weeks = Array.from({ length: totalWeeks }, (_, index) => {
     const weekStart = addDays(start, index * 7);
@@ -169,23 +170,46 @@ function renderTimelineChart(items) {
       }
     });
 
+  let cumulative = 0;
+  const points = [
+    { index: -1, label: "Inicio", start, end: start, count: 0, cumulative: 0 }
+  ].concat(weeks.map((week) => {
+    cumulative += week.count;
+    return { ...week, cumulative };
+  }));
+
   const width = 720;
   const height = 260;
   const pad = { top: 18, right: 22, bottom: 42, left: 42 };
   const innerWidth = width - pad.left - pad.right;
   const innerHeight = height - pad.top - pad.bottom;
-  const maxValue = Math.max(...weeks.map((week) => week.count), 1);
-  const band = innerWidth / weeks.length;
-  const barGap = Math.min(8, band * 0.35);
-  const barWidth = Math.max(band - barGap, 4);
-  const xFor = (week) => pad.left + week.index * band + (band - barWidth) / 2;
+  const maxValue = Math.max(...points.map((point) => point.cumulative), 1);
+  const xForDate = (dateValue) => pad.left + (Math.min(Math.max(daysBetween(start, dateValue), 0), totalDays) / totalDays) * innerWidth;
+  const xFor = (point) => xForDate(point.end);
   const yFor = (value) => pad.top + innerHeight - (value / maxValue) * innerHeight;
-  const xTicks = weeks.filter((week) => week.index === 0 || week.index === weeks.length - 1 || week.index % 4 === 0);
+  const linePath = points.map((point, index) => `${index === 0 ? "M" : "L"} ${xFor(point).toFixed(2)} ${yFor(point.cumulative).toFixed(2)}`).join(" ");
+  const areaPath = `${linePath} L ${xFor(points[points.length - 1]).toFixed(2)} ${pad.top + innerHeight} L ${pad.left} ${pad.top + innerHeight} Z`;
+  const monthTicks = [];
+  const monthCursor = new Date(start.getFullYear(), start.getMonth(), 1, 12);
+  while (monthCursor <= end) {
+    const tickDate = monthCursor < start ? start : new Date(monthCursor);
+    monthTicks.push({
+      date: tickDate,
+      label: new Intl.DateTimeFormat("es-CL", { month: "short" }).format(tickDate)
+    });
+    monthCursor.setMonth(monthCursor.getMonth() + 1);
+  }
+  if (monthTicks[monthTicks.length - 1]?.date < end && monthTicks[monthTicks.length - 1]?.date.getMonth() !== end.getMonth()) {
+    monthTicks.push({
+      date: end,
+      label: new Intl.DateTimeFormat("es-CL", { month: "short" }).format(end)
+    });
+  }
 
   els.timelineHint.textContent = `${items.length} casos · ${totalWeeks} semanas de gobierno`;
   els.timelineChart.innerHTML = `
-    <svg class="timeline-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Renuncias por semana desde el 11 de marzo de 2026">
-      <title>Renuncias por semana desde el 11 de marzo de 2026</title>
+    <svg class="timeline-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Renuncias acumuladas por semana desde el 11 de marzo de 2026">
+      <title>Renuncias acumuladas por semana desde el 11 de marzo de 2026</title>
       <line class="timeline-axis" x1="${pad.left}" y1="${pad.top + innerHeight}" x2="${pad.left + innerWidth}" y2="${pad.top + innerHeight}"></line>
       <line class="timeline-axis" x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${pad.top + innerHeight}"></line>
       ${[0, Math.ceil(maxValue / 2), maxValue].map((value) => `
@@ -194,16 +218,19 @@ function renderTimelineChart(items) {
           <text class="timeline-y-label" x="${pad.left - 10}" y="${yFor(value) + 4}">${value}</text>
         </g>
       `).join("")}
-      ${weeks.map((week) => `
-        <rect class="timeline-bar" x="${xFor(week).toFixed(2)}" y="${yFor(week.count).toFixed(2)}" width="${barWidth.toFixed(2)}" height="${Math.max(pad.top + innerHeight - yFor(week.count), week.count ? 2 : 0).toFixed(2)}">
-          <title>${week.label}: ${formatDate(isoFromDate(week.start))} al ${formatDate(isoFromDate(week.end))}; ${week.count} salidas</title>
-        </rect>
-      `).join("")}
-      ${xTicks.map((week) => `
+      ${monthTicks.map((tick) => `
         <g>
-          <line class="timeline-tick" x1="${xFor(week) + barWidth / 2}" y1="${pad.top + innerHeight}" x2="${xFor(week) + barWidth / 2}" y2="${pad.top + innerHeight + 5}"></line>
-          <text class="timeline-x-label" x="${xFor(week) + barWidth / 2}" y="${height - 12}">${week.label}</text>
+          <line class="timeline-month-grid" x1="${xForDate(tick.date)}" y1="${pad.top}" x2="${xForDate(tick.date)}" y2="${pad.top + innerHeight}"></line>
+          <line class="timeline-tick" x1="${xForDate(tick.date)}" y1="${pad.top + innerHeight}" x2="${xForDate(tick.date)}" y2="${pad.top + innerHeight + 5}"></line>
+          <text class="timeline-x-label" x="${xForDate(tick.date)}" y="${height - 12}">${tick.label}</text>
         </g>
+      `).join("")}
+      <path class="timeline-area" d="${areaPath}"></path>
+      <path class="timeline-line" d="${linePath}"></path>
+      ${points.slice(1).map((point) => `
+        <circle class="timeline-dot" cx="${xFor(point)}" cy="${yFor(point.cumulative)}" r="${point.count > 0 ? 3.7 : 2.4}">
+          <title>${point.label}: ${formatDate(isoFromDate(point.start))} al ${formatDate(isoFromDate(point.end))}; ${point.count} salidas; ${point.cumulative} acumuladas</title>
+        </circle>
       `).join("")}
     </svg>
   `;

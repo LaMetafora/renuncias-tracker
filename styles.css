@@ -401,14 +401,28 @@ h3 {
   stroke-width: 1;
 }
 
-.timeline-bar {
-  fill: var(--navy);
-  opacity: 0.9;
+.timeline-month-grid {
+  stroke: rgba(7, 27, 61, 0.08);
+  stroke-width: 1;
+  stroke-dasharray: 4 6;
 }
 
-.timeline-bar:hover {
+.timeline-area {
+  fill: rgba(95, 109, 134, 0.18);
+}
+
+.timeline-line {
+  fill: none;
+  stroke: var(--navy);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.timeline-dot {
   fill: var(--danger);
-  opacity: 1;
+  stroke: var(--sheet);
+  stroke-width: 1.4;
 }
 
 .timeline-x-label,
