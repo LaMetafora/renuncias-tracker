@@ -335,6 +335,14 @@ h3 {
   font-style: italic;
 }
 
+.chart-owner {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-family: "Space Mono", ui-monospace, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
 .panel-head span {
   color: var(--muted);
   font-size: 13px;
@@ -382,6 +390,39 @@ h3 {
 .timeline-chart {
   position: relative;
   z-index: 1;
+}
+
+.timeline-chart.is-hidden {
+  display: none;
+}
+
+.chart-toggle {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  gap: 6px;
+  margin: 4px 0 18px;
+  padding: 4px;
+  background: var(--wash);
+  border: 1px solid var(--rule);
+}
+
+.chart-toggle button {
+  min-height: 34px;
+  padding: 8px 12px;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: "Space Mono", ui-monospace, monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.chart-toggle button:hover,
+.chart-toggle button.is-active {
+  background: var(--navy);
+  color: white;
 }
 
 .timeline-svg {

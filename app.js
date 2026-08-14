@@ -55,10 +55,11 @@ const els = {
   latestMeta: document.querySelector("#latestMeta"),
   latestSource: document.querySelector("#latestSource"),
   stats: document.querySelector("#stats"),
+  chartTitle: document.querySelector("#chartTitle"),
   timelineChart: document.querySelector("#timelineChart"),
   timelineHint: document.querySelector("#timelineHint"),
   projectionChart: document.querySelector("#projectionChart"),
-  projectionHint: document.querySelector("#projectionHint"),
+  chartModeButtons: document.querySelector("#chartModeButtons"),
   officeBars: document.querySelector("#officeBars"),
   regionMap: document.querySelector("#regionMap"),
   regionMapHint: document.querySelector("#regionMapHint"),
@@ -210,7 +211,7 @@ function renderTimelineChart(items) {
     });
   }
 
-  els.timelineHint.textContent = `${items.length} casos · ${totalWeeks} semanas de gobierno`;
+  els.timelineHint.dataset.accumulatedText = `${items.length} casos · ${totalWeeks} semanas de gobierno`;
   els.timelineChart.innerHTML = `
     <svg class="timeline-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Renuncias acumuladas por semana desde el 11 de marzo de 2026">
       <title>Renuncias acumuladas por semana desde el 11 de marzo de 2026</title>
@@ -323,7 +324,7 @@ function renderProjectionChart(items) {
     monthIndex += 1;
   }
 
-  els.projectionHint.textContent = `Al ritmo actual: ${projectedTotal.toLocaleString("es-CL")} renuncias al 11 de marzo de 2030`;
+  els.timelineHint.dataset.projectionText = `Si todo sigue igual: ${projectedTotal.toLocaleString("es-CL")} renuncias al 11 de marzo de 2030`;
   els.projectionChart.innerHTML = `
     <svg class="timeline-svg projection-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Proyección de renuncias acumuladas hasta el 11 de marzo de 2030">
       <title>Proyección de renuncias acumuladas hasta el 11 de marzo de 2030</title>
@@ -354,6 +355,29 @@ function renderProjectionChart(items) {
       <text class="projection-label" x="${width - 26}" y="${yFor(finalPoint.cumulative) + 34}">proyectadas</text>
     </svg>
   `;
+}
+
+function setChartMode(mode) {
+  const isProjection = mode === "projection";
+  els.chartTitle.textContent = isProjection ? "Proyección al fin del mandato" : "Renuncias acumuladas por semana";
+  els.timelineHint.textContent = isProjection
+    ? els.timelineHint.dataset.projectionText
+    : els.timelineHint.dataset.accumulatedText;
+  els.timelineChart.classList.toggle("is-hidden", isProjection);
+  els.projectionChart.classList.toggle("is-hidden", !isProjection);
+  els.chartModeButtons.querySelectorAll("button").forEach((button) => {
+    const isActive = button.dataset.chartMode === mode;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
+function setupChartModeControls() {
+  els.chartModeButtons.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-chart-mode]");
+    if (!button) return;
+    setChartMode(button.dataset.chartMode);
+  });
 }
 
 function renderBars(container, counts, labels) {
@@ -600,6 +624,8 @@ async function boot() {
   renderStats(cases);
   renderTimelineChart(cases);
   renderProjectionChart(cases);
+  setupChartModeControls();
+  setChartMode("accumulated");
   renderBars(els.officeBars, byCount(cases, "ministerio_master"), {});
   renderRegionMap(cases);
   els.officeHint.textContent = `${cases.length} casos`;

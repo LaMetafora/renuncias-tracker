@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600;1,700&family=Libre+Baskerville:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=projection-1">
+  <link rel="stylesheet" href="styles.css?v=chart-switch-1">
 </head>
 <body>
   <header class="site-head">
@@ -62,17 +62,18 @@
         <div class="stats" id="stats"></div>
         <article class="panel timeline-panel">
           <div class="panel-head">
-            <h3>Renuncias acumuladas por semana</h3>
+            <div>
+              <h3 id="chartTitle">Renuncias acumuladas por semana</h3>
+              <p class="chart-owner">Propiedad de Diario la Metáfora</p>
+            </div>
             <span id="timelineHint">Desde el 11 de marzo de 2026</span>
           </div>
-          <div class="timeline-chart" id="timelineChart"></div>
-        </article>
-        <article class="panel timeline-panel">
-          <div class="panel-head">
-            <h3>Proyección al fin del mandato</h3>
-            <span id="projectionHint">Ritmo semanal actual hasta el 11 de marzo de 2030</span>
+          <div class="chart-toggle" id="chartModeButtons" aria-label="Cambiar gráfico">
+            <button type="button" class="is-active" data-chart-mode="accumulated" aria-pressed="true">Acumuladas</button>
+            <button type="button" data-chart-mode="projection" aria-pressed="false">Proyección</button>
           </div>
-          <div class="timeline-chart" id="projectionChart"></div>
+          <div class="timeline-chart" id="timelineChart"></div>
+          <div class="timeline-chart is-hidden" id="projectionChart"></div>
         </article>
         <div class="viz-grid">
           <article class="panel">
@@ -148,6 +149,6 @@
     </div>
   </footer>
 
-  <script src="app.js?v=projection-1"></script>
+  <script src="app.js?v=chart-switch-1"></script>
 </body>
 </html>
