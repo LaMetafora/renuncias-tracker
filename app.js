@@ -81,14 +81,12 @@ function formatDate(dateString) {
 function renderStats(items) {
   const offices = byCount(items, "office_level");
   const cargos = byCount(items, "cargo_group");
-  const regions = new Set(items.map((item) => item.region)).size;
 
   const stats = [
     ["Casos registrados", items.length],
-    ["Seremis", metadata.seremi_count ?? offices.seremi ?? 0],
-    ["Subsecretarios", cargos["Subsecretario/a"] ?? offices.subsecretary ?? 0],
     ["Ministros", cargos["Ministro/a"] ?? offices.minister ?? 0],
-    ["Territorios", regions]
+    ["Subsecretarios", cargos["Subsecretario/a"] ?? offices.subsecretary ?? 0],
+    ["Seremis", metadata.seremi_count ?? offices.seremi ?? 0]
   ];
 
   els.stats.innerHTML = stats.map(([label, value]) => `
@@ -151,7 +149,7 @@ function updateRoleFilterCounts() {
   const counts = byCount(cases.map((item) => ({ role_filter: roleFilterKey(item) })), "role_filter");
   els.roleFilters.querySelectorAll("button").forEach((button) => {
     const key = button.dataset.roleFilter;
-    const count = counts[key] || 0;
+    const count = key === "all" ? cases.length : counts[key] || 0;
     const countSlot = button.querySelector("span");
     countSlot.textContent = count;
   });
@@ -159,7 +157,8 @@ function updateRoleFilterCounts() {
 
 function updateRoleFilterState() {
   els.roleFilters.querySelectorAll("button").forEach((button) => {
-    const isActive = button.dataset.roleFilter === activeRoleFilter;
+    const key = button.dataset.roleFilter;
+    const isActive = key === "all" ? activeRoleFilter === "" : key === activeRoleFilter;
     button.classList.toggle("is-active", isActive);
     button.setAttribute("aria-pressed", String(isActive));
   });
@@ -208,7 +207,7 @@ function bindRoleFilters() {
   els.roleFilters.querySelectorAll("button[data-role-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       const nextFilter = button.dataset.roleFilter;
-      activeRoleFilter = activeRoleFilter === nextFilter ? "" : nextFilter;
+      activeRoleFilter = nextFilter === "all" || activeRoleFilter === nextFilter ? "" : nextFilter;
       updateRoleFilterState();
       renderFiltered();
     });
