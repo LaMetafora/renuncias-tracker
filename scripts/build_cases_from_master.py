@@ -14,6 +14,7 @@ from openpyxl import load_workbook
 ROOT = Path(__file__).resolve().parents[1]
 WORKBOOK = ROOT / "data" / "contador de renuncias, 1 de agosto.xlsm"
 OUTPUT = ROOT / "data" / "cases.json"
+SOURCE_OVERRIDES = ROOT / "data" / "source_overrides.json"
 
 INCLUDE_RECOMMENDATIONS = {
     "add_to_core_counter",
@@ -41,6 +42,12 @@ def clean_text(value: Any) -> str | None:
     if not text or text.lower() == "none":
         return None
     return re.sub(r"\s+", " ", text)
+
+
+def load_source_overrides() -> dict[str, dict[str, str | None]]:
+    if not SOURCE_OVERRIDES.exists():
+        return {}
+    return json.loads(SOURCE_OVERRIDES.read_text(encoding="utf-8"))
 
 
 def iso_date(value: Any) -> str | None:
@@ -155,15 +162,21 @@ def reason_category(row: dict[str, Any], summary: str | None) -> str:
     return "not_specified"
 
 
-def source_for(row: dict[str, Any]) -> dict[str, str | None]:
+def source_for(row: dict[str, Any], overrides: dict[str, dict[str, str | None]]) -> dict[str, str | None]:
+    override = overrides.get(clean_text(row.get("master_id")) or "")
     url = clean_text(row.get("url_renunciaskast"))
     outlet = clean_text(row.get("medio_renunciaskast")) or clean_text(row.get("medio_factiva"))
     title = clean_text(row.get("titular_factiva"))
+    if override and not url:
+        url = clean_text(override.get("url"))
+        outlet = clean_text(override.get("outlet")) or outlet
+        title = clean_text(override.get("title")) or title
     return {"outlet": outlet or "Fuente", "url": url, "title": title}
 
 
 def build() -> dict[str, Any]:
     wb = load_workbook(WORKBOOK, read_only=True, data_only=True, keep_vba=True)
+    source_overrides = load_source_overrides()
     ws = wb["Master"]
     rows = list(ws.iter_rows(values_only=True))
     headers = list(rows[0])
@@ -205,7 +218,7 @@ def build() -> dict[str, Any]:
             "verification_status": "verified" if clean_text(row.get("chequeo_manual")) == "☑" else "needs_review",
             "count_recommendation": recommendation,
             "seremi_counter": seremi_counter,
-            "source": source_for(row),
+            "source": source_for(row, source_overrides),
         }
         cases.append(case)
 

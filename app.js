@@ -134,19 +134,20 @@ function renderCases(items) {
 }
 
 function sourceHref(item) {
-  return item.source?.url || `data/cases.json#${encodeURIComponent(item.case_id)}`;
+  return item.source?.url || "";
 }
 
 function sourceMarkup(item) {
   const source = item.source;
   const hasDirectUrl = Boolean(source?.url);
   const outlet = source?.outlet || "fuente";
-  const label = hasDirectUrl ? `Abrir nota · ${outlet}` : `Ver dato · ${outlet}`;
-  const title = hasDirectUrl
-    ? (source.title || `Abrir fuente en ${outlet}`)
-    : `Este caso no trae URL publica en la base; abre el registro de datos.`;
+  const title = source?.title || `Fuente: ${outlet}`;
 
-  return `<a class="source-link ${hasDirectUrl ? "" : "source-data"}" href="${escapeHtml(sourceHref(item))}" target="${hasDirectUrl ? "_blank" : "_self"}" rel="noopener" title="${escapeHtml(title)}">${escapeHtml(label)}</a>`;
+  if (!hasDirectUrl) {
+    return `<span class="source-link source-static" title="${escapeHtml(title)}">Sin URL publica · ${escapeHtml(outlet)}</span>`;
+  }
+
+  return `<a class="source-link" href="${escapeHtml(sourceHref(item))}" target="_blank" rel="noopener" title="${escapeHtml(title)}">Abrir nota · ${escapeHtml(outlet)}</a>`;
 }
 
 function renderFiltered() {
@@ -178,12 +179,18 @@ async function boot() {
   els.totalCount.textContent = payload.metadata.case_count;
   els.latestTitle.textContent = latest.person_name;
   els.latestMeta.textContent = `${latest.office_title} · ${latest.region} · ${formatDate(latest.exit_date)}`;
-  els.latestSource.href = sourceHref(latest);
-  els.latestSource.textContent = latest.source?.url
-    ? `Abrir nota · ${latest.source.outlet}`
-    : `Ver dato · ${latest.source?.outlet || "fuente"}`;
-  els.latestSource.target = latest.source?.url ? "_blank" : "_self";
-  els.latestSource.title = latest.source?.title || "Abrir registro de datos";
+  if (latest.source?.url) {
+    els.latestSource.href = sourceHref(latest);
+    els.latestSource.textContent = `Abrir nota · ${latest.source.outlet}`;
+    els.latestSource.target = "_blank";
+    els.latestSource.title = latest.source?.title || `Abrir fuente en ${latest.source.outlet}`;
+  } else {
+    els.latestSource.removeAttribute("href");
+    els.latestSource.removeAttribute("target");
+    els.latestSource.textContent = `Sin URL publica · ${latest.source?.outlet || "fuente"}`;
+    els.latestSource.title = latest.source?.title || "Este caso no trae URL publica en la base.";
+    els.latestSource.classList.add("source-static");
+  }
 
   renderStats(cases);
   renderBars(els.officeBars, byCount(cases, "cargo_group"), {});
