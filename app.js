@@ -29,6 +29,44 @@ const exitTypeLabels = {
   unknown: "Salida"
 };
 
+const regionMapOrder = [
+  ["Arica y Parinacota", "Arica"],
+  ["Tarapacá", "Tarapacá"],
+  ["Antofagasta", "Antofagasta"],
+  ["Atacama", "Atacama"],
+  ["Coquimbo", "Coquimbo"],
+  ["Valparaíso", "Valparaíso"],
+  ["Región Metropolitana", "Metropolitana"],
+  ["O'Higgins", "O'Higgins"],
+  ["Maule", "Maule"],
+  ["Ñuble", "Ñuble"],
+  ["Biobío", "Biobío"],
+  ["La Araucanía", "Araucanía"],
+  ["Los Ríos", "Los Ríos"],
+  ["Los Lagos", "Los Lagos"],
+  ["Aysén", "Aysén"],
+  ["Magallanes", "Magallanes"]
+];
+
+const regionShapes = [
+  [76, 8, 42, 18],
+  [70, 30, 48, 20],
+  [64, 54, 54, 28],
+  [60, 86, 50, 26],
+  [54, 116, 48, 24],
+  [50, 144, 42, 20],
+  [45, 168, 44, 18],
+  [42, 190, 42, 18],
+  [38, 212, 42, 20],
+  [34, 236, 40, 18],
+  [30, 258, 42, 20],
+  [27, 282, 38, 22],
+  [23, 308, 34, 20],
+  [20, 332, 32, 30],
+  [16, 366, 30, 42],
+  [8, 412, 42, 26]
+];
+
 const els = {
   updatedLabel: document.querySelector("#updatedLabel"),
   totalCount: document.querySelector("#totalCount"),
@@ -37,7 +75,8 @@ const els = {
   latestSource: document.querySelector("#latestSource"),
   stats: document.querySelector("#stats"),
   officeBars: document.querySelector("#officeBars"),
-  reasonBars: document.querySelector("#reasonBars"),
+  regionMap: document.querySelector("#regionMap"),
+  regionMapHint: document.querySelector("#regionMapHint"),
   officeHint: document.querySelector("#officeHint"),
   caseList: document.querySelector("#caseList"),
   roleFilters: document.querySelector("#roleFilters"),
@@ -110,6 +149,60 @@ function renderBars(container, counts, labels) {
       <div class="bar-count">${value}</div>
     </div>
   `).join("");
+}
+
+function regionLevel(value, max) {
+  if (value === 0) return 0;
+  return Math.max(1, Math.ceil((value / Math.max(max, 1)) * 5));
+}
+
+function renderRegionMap(items) {
+  const counts = byCount(
+    items.filter((item) => item.region_group !== "Gobierno central"),
+    "region_group"
+  );
+  const centralCount = items.filter((item) => item.region_group === "Gobierno central").length;
+  const values = regionMapOrder.map(([region]) => counts[region] || 0);
+  const max = Math.max(...values, 1);
+  const totalRegional = values.reduce((sum, value) => sum + value, 0);
+
+  els.regionMapHint.textContent = `Excluye ${centralCount} casos de Gobierno central`;
+  els.regionMap.innerHTML = `
+    <div class="map-figure">
+      <svg class="chile-map-svg" viewBox="0 0 270 452" role="img" aria-label="Mapa de Chile por cantidad de salidas regionales">
+        <title>Salidas regionales por región</title>
+        ${regionMapOrder.map(([region], index) => {
+          const [x, y, width, height] = regionShapes[index];
+          const count = counts[region] || 0;
+          const level = regionLevel(count, max);
+          const labelY = y + height / 2 + 4;
+          return `
+            <g class="map-region-group">
+              <rect class="map-region level-${level}" x="${x}" y="${y}" width="${width}" height="${height}" rx="3">
+                <title>${escapeHtml(region)}: ${count} casos</title>
+              </rect>
+              <text class="map-region-count" x="${x + width / 2}" y="${labelY}">${count}</text>
+              <line class="map-leader" x1="${x + width + 5}" y1="${labelY - 4}" x2="128" y2="${labelY - 4}"></line>
+              <text class="map-label" x="136" y="${labelY}">${escapeHtml(regionMapOrder[index][1])}</text>
+            </g>
+          `;
+        }).join("")}
+      </svg>
+      <div class="map-summary">
+        <strong>${totalRegional}</strong>
+        <span>casos regionales mapeados</span>
+      </div>
+    </div>
+    <div class="map-legend" aria-label="Escala de color">
+      <span>Menos</span>
+      <i class="level-1"></i>
+      <i class="level-2"></i>
+      <i class="level-3"></i>
+      <i class="level-4"></i>
+      <i class="level-5"></i>
+      <span>Más</span>
+    </div>
+  `;
 }
 
 function renderCases(items) {
@@ -240,7 +333,7 @@ async function boot() {
 
   renderStats(cases);
   renderBars(els.officeBars, byCount(cases, "ministerio_master"), {});
-  renderBars(els.reasonBars, byCount(cases, "region_group"), {});
+  renderRegionMap(cases);
   els.officeHint.textContent = `${cases.length} casos`;
   updateRoleFilterCounts();
   updateRoleFilterState();

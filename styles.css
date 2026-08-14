@@ -374,6 +374,125 @@ h3 {
   text-align: right;
 }
 
+.region-map {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 12px;
+}
+
+.map-figure {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 128px;
+  gap: 14px;
+  align-items: end;
+}
+
+.chile-map-svg {
+  width: 100%;
+  min-height: 390px;
+}
+
+.map-region {
+  stroke: var(--navy);
+  stroke-width: 1.2;
+}
+
+.map-region.level-0 {
+  fill: #eef1f4;
+}
+
+.map-region.level-1,
+.map-legend .level-1 {
+  fill: #dfe6ef;
+  background: #dfe6ef;
+}
+
+.map-region.level-2,
+.map-legend .level-2 {
+  fill: #b9c7d9;
+  background: #b9c7d9;
+}
+
+.map-region.level-3,
+.map-legend .level-3 {
+  fill: #8497b3;
+  background: #8497b3;
+}
+
+.map-region.level-4,
+.map-legend .level-4 {
+  fill: #405977;
+  background: #405977;
+}
+
+.map-region.level-5,
+.map-legend .level-5 {
+  fill: var(--navy);
+  background: var(--navy);
+}
+
+.map-region-count {
+  fill: white;
+  font-family: "Space Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
+  text-anchor: middle;
+}
+
+.map-region.level-0 + .map-region-count,
+.map-region.level-1 + .map-region-count {
+  fill: var(--navy);
+}
+
+.map-leader {
+  stroke: rgba(7, 27, 61, 0.25);
+  stroke-width: 1;
+}
+
+.map-label {
+  fill: var(--ink);
+  font-family: "Space Mono", ui-monospace, monospace;
+  font-size: 10px;
+}
+
+.map-summary {
+  padding-bottom: 18px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.map-summary strong {
+  display: block;
+  color: var(--navy);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 52px;
+  line-height: 0.9;
+}
+
+.map-summary span {
+  display: block;
+  margin-top: 8px;
+}
+
+.map-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-family: "Space Mono", ui-monospace, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.map-legend i {
+  display: inline-block;
+  width: 18px;
+  height: 10px;
+  border: 1px solid rgba(7, 27, 61, 0.25);
+}
+
 .table-head {
   display: flex;
   align-items: end;
@@ -622,5 +741,17 @@ footer {
 
   .bar-row {
     grid-template-columns: 1fr 1fr 24px;
+  }
+
+  .map-figure {
+    grid-template-columns: 1fr;
+  }
+
+  .chile-map-svg {
+    min-height: 360px;
+  }
+
+  .map-summary {
+    padding-bottom: 0;
   }
 }
