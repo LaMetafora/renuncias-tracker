@@ -127,7 +127,6 @@ a {
   border-radius: 28px;
 }
 
-.tracker-card::before,
 .timeline-panel::before {
   content: "";
   position: absolute;
