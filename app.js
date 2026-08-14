@@ -48,25 +48,6 @@ const regionMapOrder = [
   ["Magallanes", "Magallanes"]
 ];
 
-const regionShapes = [
-  [76, 8, 42, 18],
-  [70, 30, 48, 20],
-  [64, 54, 54, 28],
-  [60, 86, 50, 26],
-  [54, 116, 48, 24],
-  [50, 144, 42, 20],
-  [45, 168, 44, 18],
-  [42, 190, 42, 18],
-  [38, 212, 42, 20],
-  [34, 236, 40, 18],
-  [30, 258, 42, 20],
-  [27, 282, 38, 22],
-  [23, 308, 34, 20],
-  [20, 332, 32, 30],
-  [16, 366, 30, 42],
-  [8, 412, 42, 26]
-];
-
 const els = {
   updatedLabel: document.querySelector("#updatedLabel"),
   totalCount: document.querySelector("#totalCount"),
@@ -85,6 +66,7 @@ const els = {
 
 let cases = [];
 let metadata = {};
+let regionGeo = null;
 let activeRoleFilter = "";
 
 function byCount(items, key) {
@@ -165,32 +147,40 @@ function renderRegionMap(items) {
   const values = regionMapOrder.map(([region]) => counts[region] || 0);
   const max = Math.max(...values, 1);
   const totalRegional = values.reduce((sum, value) => sum + value, 0);
+  const featuresByRegion = new Map((regionGeo?.features || []).map((feature) => [feature.region, feature]));
+  const orderedFeatures = regionMapOrder
+    .map(([region]) => featuresByRegion.get(region))
+    .filter(Boolean);
 
   els.regionMapHint.textContent = `Excluye ${centralCount} casos de Gobierno central`;
+  if (!regionGeo || orderedFeatures.length === 0) {
+    els.regionMap.innerHTML = `<p class="map-note">No se pudo cargar la geometría regional.</p>`;
+    return;
+  }
+
   els.regionMap.innerHTML = `
     <div class="map-figure">
-      <svg class="chile-map-svg" viewBox="0 0 270 452" role="img" aria-label="Mapa de Chile por cantidad de salidas regionales">
+      <svg class="chile-map-svg" viewBox="${escapeHtml(regionGeo.viewBox)}" role="img" aria-label="Mapa de Chile por cantidad de salidas regionales">
         <title>Salidas regionales por región</title>
-        ${regionMapOrder.map(([region], index) => {
-          const [x, y, width, height] = regionShapes[index];
+        ${orderedFeatures.map((feature) => {
+          const region = feature.region;
           const count = counts[region] || 0;
           const level = regionLevel(count, max);
-          const labelY = y + height / 2 + 4;
           return `
-            <g class="map-region-group">
-              <rect class="map-region level-${level}" x="${x}" y="${y}" width="${width}" height="${height}" rx="3">
-                <title>${escapeHtml(region)}: ${count} casos</title>
-              </rect>
-              <text class="map-region-count" x="${x + width / 2}" y="${labelY}">${count}</text>
-              <line class="map-leader" x1="${x + width + 5}" y1="${labelY - 4}" x2="128" y2="${labelY - 4}"></line>
-              <text class="map-label" x="136" y="${labelY}">${escapeHtml(regionMapOrder[index][1])}</text>
-            </g>
+            <path class="map-region level-${level}" d="${escapeHtml(feature.path)}" tabindex="0">
+              <title>${escapeHtml(region)}: ${count} casos</title>
+            </path>
           `;
         }).join("")}
       </svg>
       <div class="map-summary">
         <strong>${totalRegional}</strong>
         <span>casos regionales mapeados</span>
+        <div class="map-list">
+          ${Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([region, count]) => `
+            <div><span>${escapeHtml(region)}</span><strong>${count}</strong></div>
+          `).join("")}
+        </div>
       </div>
     </div>
     <div class="map-legend" aria-label="Escala de color">
@@ -202,6 +192,7 @@ function renderRegionMap(items) {
       <i class="level-5"></i>
       <span>Más</span>
     </div>
+    <p class="map-note">Geometría regional simplificada a partir de mapas vectoriales BCN.</p>
   `;
 }
 
@@ -308,8 +299,12 @@ function bindRoleFilters() {
 }
 
 async function boot() {
-  const response = await fetch("data/cases.json");
+  const [response, geoResponse] = await Promise.all([
+    fetch("data/cases.json"),
+    fetch("assets/geo/chile-regions-paths.json")
+  ]);
   const payload = await response.json();
+  regionGeo = await geoResponse.json();
   metadata = payload.metadata || {};
   cases = sortByDateDesc(payload.cases);
   const latest = cases[0];

@@ -383,19 +383,27 @@ h3 {
 
 .map-figure {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) 128px;
+  grid-template-columns: minmax(150px, 1fr) 170px;
   gap: 14px;
-  align-items: end;
+  align-items: center;
 }
 
 .chile-map-svg {
   width: 100%;
-  min-height: 390px;
+  max-height: 520px;
 }
 
 .map-region {
   stroke: var(--navy);
-  stroke-width: 1.2;
+  stroke-linejoin: round;
+  stroke-width: 0.7;
+  transition: fill 160ms ease, stroke-width 160ms ease;
+}
+
+.map-region:hover,
+.map-region:focus {
+  outline: none;
+  stroke-width: 1.8;
 }
 
 .map-region.level-0 {
@@ -432,33 +440,7 @@ h3 {
   background: var(--navy);
 }
 
-.map-region-count {
-  fill: white;
-  font-family: "Space Mono", ui-monospace, monospace;
-  font-size: 10px;
-  font-weight: 700;
-  pointer-events: none;
-  text-anchor: middle;
-}
-
-.map-region.level-0 + .map-region-count,
-.map-region.level-1 + .map-region-count {
-  fill: var(--navy);
-}
-
-.map-leader {
-  stroke: rgba(7, 27, 61, 0.25);
-  stroke-width: 1;
-}
-
-.map-label {
-  fill: var(--ink);
-  font-family: "Space Mono", ui-monospace, monospace;
-  font-size: 10px;
-}
-
 .map-summary {
-  padding-bottom: 18px;
   color: var(--muted);
   font-size: 12px;
 }
@@ -476,6 +458,35 @@ h3 {
   margin-top: 8px;
 }
 
+.map-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 16px;
+}
+
+.map-list div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  gap: 8px;
+  align-items: baseline;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(7, 27, 61, 0.12);
+}
+
+.map-list span {
+  margin: 0;
+  color: var(--ink);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.map-list strong {
+  color: var(--navy);
+  font-family: "Space Mono", ui-monospace, monospace;
+  font-size: 12px;
+  text-align: right;
+}
+
 .map-legend {
   display: flex;
   align-items: center;
@@ -491,6 +502,12 @@ h3 {
   width: 18px;
   height: 10px;
   border: 1px solid rgba(7, 27, 61, 0.25);
+}
+
+.map-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .table-head {
@@ -748,7 +765,7 @@ footer {
   }
 
   .chile-map-svg {
-    min-height: 360px;
+    max-height: none;
   }
 
   .map-summary {
