@@ -674,7 +674,6 @@ function segmentedBar(row, max, activeRoles) {
 function renderMinistryBars(items) {
   const { rows, hidden, otherTotal, expanded, activeRoles } = groupedMinistryCounts(items);
   const visibleMax = Math.max(...rows.map((entry) => entry.activeTotal), 1);
-  const hiddenMax = Math.max(...hidden.map((entry) => entry.activeTotal), 1);
 
   const rowMarkup = rows.map((row) => {
     return `
@@ -698,7 +697,7 @@ function renderMinistryBars(items) {
       ${hidden.map((row) => `
         <div class="bar-row bar-row-sub">
           <div class="bar-label">${escapeHtml(ministryShortLabel(row.key))}</div>
-          ${segmentedBar(row, hiddenMax, activeRoles)}
+          ${segmentedBar(row, visibleMax, activeRoles)}
           <div class="bar-count">${row.activeTotal}</div>
         </div>
       `).join("")}
