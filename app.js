@@ -177,7 +177,7 @@ function renderRegionMap(items) {
         <strong>${totalRegional}</strong>
         <span>casos regionales mapeados</span>
         <div class="map-list">
-          ${Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([region, count]) => `
+          ${regionMapOrder.map(([region]) => [region, counts[region] || 0]).map(([region, count]) => `
             <div><span>${escapeHtml(region)}</span><strong>${count}</strong></div>
           `).join("")}
         </div>
