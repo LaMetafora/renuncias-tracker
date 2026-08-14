@@ -555,11 +555,14 @@ def build() -> dict[str, Any]:
     cargo_counts = Counter(item["cargo_group"] for item in cases)
     ministry_counts = Counter(item["ministerio_master"] for item in cases)
     region_counts = Counter(item["region_group"] for item in cases)
-    fallback_updated_at = date_from_workbook_name(workbook.name) or max(
+    max_case_date = max(
         (datetime.fromisoformat(item["exit_date"]).date() for item in cases if item.get("exit_date")),
         default=date.today(),
     )
+    fallback_updated_at = date_from_workbook_name(workbook.name) or max_case_date
     updated_at = updated_at_from_summary(wb, fallback_updated_at)
+    if datetime.fromisoformat(updated_at).date() > max_case_date:
+        updated_at = max_case_date.isoformat()
     updated_date = datetime.fromisoformat(updated_at).date()
     weeks_elapsed = government_weeks_elapsed(GOVERNMENT_START, updated_date)
     resignations_per_week = round(len(cases) / weeks_elapsed, 3) if weeks_elapsed else None

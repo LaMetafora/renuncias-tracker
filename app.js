@@ -815,7 +815,7 @@ function bindRoleFilters() {
 
 async function boot() {
   const [response, geoResponse] = await Promise.all([
-    fetch("data/cases.json?v=noche-1"),
+    fetch("data/cases.json?v=fecha-14-ago-1"),
     fetch("assets/geo/chile-regions-paths.json")
   ]);
   const payload = await response.json();
