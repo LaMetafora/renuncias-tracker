@@ -51,9 +51,8 @@ const regionMapOrder = [
 const els = {
   updatedLabel: document.querySelector("#updatedLabel"),
   totalCount: document.querySelector("#totalCount"),
-  latestTitle: document.querySelector("#latestTitle"),
-  latestMeta: document.querySelector("#latestMeta"),
-  latestSource: document.querySelector("#latestSource"),
+  paceFacts: document.querySelector("#paceFacts"),
+  paceNote: document.querySelector("#paceNote"),
   stats: document.querySelector("#stats"),
   chartTitle: document.querySelector("#chartTitle"),
   timelineChart: document.querySelector("#timelineChart"),
@@ -75,6 +74,7 @@ let cases = [];
 let metadata = {};
 let regionGeo = null;
 let activeRoleFilter = "";
+let selectedRegion = "";
 
 const MANDATE_END = "2030-03-11";
 const JUNE_PROJECTION_START_WEEK = 13;
@@ -164,19 +164,100 @@ function juneWeeklyAverage(items) {
   };
 }
 
+function longestZeroWeekRun(items) {
+  const startISO = metadata.government_start || "2026-03-11";
+  const observedWeeks = metadata.government_weeks_elapsed || 0;
+  const counts = weeklyCountsSinceStart(items, startISO, observedWeeks);
+  let best = [];
+  let current = [];
+
+  counts.forEach((count, index) => {
+    if (count === 0) {
+      current.push(index + 1);
+      if (current.length > best.length) {
+        best = [...current];
+      }
+      return;
+    }
+    current = [];
+  });
+
+  return {
+    weeks: best,
+    length: best.length,
+    label: best.length ? `S${best[0]}${best.length > 1 ? `-S${best[best.length - 1]}` : ""}` : "Sin pausas"
+  };
+}
+
+function renderPaceFacts(items) {
+  const rate = metadata.resignations_per_week;
+  const juneRate = juneWeeklyAverage(items);
+  const zeroRun = longestZeroWeekRun(items);
+  const generalLabel = `${items.length}/${metadata.government_weeks_elapsed || "—"} semanas`;
+  const juneLabel = `${juneRate.count}/${juneRate.weeks || "—"} semanas`;
+
+  els.paceFacts.innerHTML = [
+    ["Desde marzo", rate == null ? "—" : rate.toLocaleString("es-CL", { maximumFractionDigits: 2 }), generalLabel],
+    ["Desde junio", juneRate.average == null ? "—" : juneRate.average.toLocaleString("es-CL", { maximumFractionDigits: 2 }), juneLabel]
+  ].map(([label, value, detail]) => `
+    <div class="pace-fact">
+      <strong>${value}</strong>
+      <span>${escapeHtml(label)}</span>
+      <small>${escapeHtml(detail)}</small>
+    </div>
+  `).join("");
+
+  els.paceNote.textContent = zeroRun.length
+    ? `Récord sin salidas: ${zeroRun.length} semanas seguidas (${zeroRun.label}), en julio.`
+    : "Todavía no hay una semana sin salidas registradas.";
+}
+
+function ministerEvents(items) {
+  const grouped = items
+    .filter((item) => item.office_level === "minister" && item.exit_date)
+    .reduce((acc, item) => {
+      acc[item.exit_date] ||= [];
+      acc[item.exit_date].push(item);
+      return acc;
+    }, {});
+
+  return Object.entries(grouped)
+    .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+    .map(([date, eventItems]) => ({
+      date,
+      label: eventItems.length > 1 ? "Cambio de gabinete" : "Cambio ministerial",
+      detail: eventItems.map((item) => item.person_name).join(" + ")
+    }));
+}
+
+function zeroWeekRuns(weeks) {
+  const runs = [];
+  let current = [];
+  weeks.forEach((week) => {
+    if (week.count === 0) {
+      current.push(week);
+      return;
+    }
+    if (current.length) {
+      runs.push(current);
+    }
+    current = [];
+  });
+  if (current.length) {
+    runs.push(current);
+  }
+  return runs;
+}
+
 function renderStats(items) {
   const offices = byCount(items, "office_level");
   const cargos = byCount(items, "cargo_group");
-  const rate = metadata.resignations_per_week;
-  const juneRate = juneWeeklyAverage(items);
 
   const stats = [
     ["Casos registrados", items.length],
     ["Ministros", cargos["Ministro/a"] ?? offices.minister ?? 0],
     ["Subsecretarios", cargos["Subsecretario/a"] ?? offices.subsecretary ?? 0],
-    ["Seremis", metadata.seremi_count ?? offices.seremi ?? 0],
-    [`Renuncias promedio por semana (${items.length}/${metadata.government_weeks_elapsed || "—"})`, rate == null ? "—" : rate.toLocaleString("es-CL", { maximumFractionDigits: 2 })],
-    [`Renuncias promedio por semana desde junio (${juneRate.count}/${juneRate.weeks || "—"})`, juneRate.average == null ? "—" : juneRate.average.toLocaleString("es-CL", { maximumFractionDigits: 2 })]
+    ["Seremis", metadata.seremi_count ?? offices.seremi ?? 0]
   ];
 
   els.stats.innerHTML = stats.map(([label, value]) => `
@@ -252,6 +333,8 @@ function renderTimelineChart(items) {
       label: new Intl.DateTimeFormat("es-CL", { month: "short" }).format(end)
     });
   }
+  const events = ministerEvents(items).filter((event) => event.date >= startISO && event.date <= endISO);
+  const zeroRuns = zeroWeekRuns(weeks).filter((run) => run.length > 0);
 
   els.timelineHint.dataset.accumulatedText = `${items.length} casos · ${totalWeeks} semanas de gobierno`;
   els.timelineChart.innerHTML = `
@@ -272,8 +355,28 @@ function renderTimelineChart(items) {
           <text class="timeline-x-label" x="${xForDate(tick.date)}" y="${height - 12}">${tick.label}</text>
         </g>
       `).join("")}
+      ${zeroRuns.map((run) => {
+        const x1 = xForDate(run[0].start);
+        const x2 = xForDate(run[run.length - 1].end);
+        const labelX = x1 + Math.max((x2 - x1) / 2, 18);
+        return `
+          <rect class="zero-week-band" x="${x1}" y="${pad.top}" width="${Math.max(x2 - x1, 4)}" height="${innerHeight}"></rect>
+          <text class="zero-week-label" x="${labelX}" y="${pad.top + 16}">${run.length} semanas sin salidas</text>
+        `;
+      }).join("")}
       <path class="timeline-area" d="${areaPath}"></path>
       <path class="timeline-line" d="${linePath}"></path>
+      ${events.map((event, index) => {
+        const x = xForDate(dateFromISO(event.date));
+        const y = pad.top + 26 + index * 24;
+        return `
+          <line class="minister-event-line" x1="${x}" y1="${pad.top}" x2="${x}" y2="${pad.top + innerHeight}"></line>
+          <text class="minister-event-label" x="${Math.min(x + 8, pad.left + innerWidth - 104)}" y="${y}">
+            <tspan>${escapeHtml(event.label)}</tspan>
+            <tspan x="${Math.min(x + 8, pad.left + innerWidth - 104)}" dy="12">${escapeHtml(event.detail)}</tspan>
+          </text>
+        `;
+      }).join("")}
       ${points.slice(1).map((point) => `
         <circle class="timeline-dot" cx="${xFor(point)}" cy="${yFor(point.cumulative)}" r="${point.count > 0 ? 3.7 : 2.4}">
           <title>${point.label}: ${formatDate(isoFromDate(point.start))} al ${formatDate(isoFromDate(point.end))}; ${point.count} salidas; ${point.cumulative} acumuladas</title>
@@ -415,8 +518,8 @@ function renderProjectionChart(items) {
       <circle class="projection-dot" cx="${xFor(finalPoint)}" cy="${yFor(finalPoint.cumulative)}" r="5">
         <title>Proyección al 11 de marzo de 2030: ${projectedTotal} salidas</title>
       </circle>
-      <text class="projection-value" x="${width - 48}" y="${Math.min(yFor(finalPoint.cumulative) + 42, pad.top + innerHeight - 28)}">${projectedTotal.toLocaleString("es-CL")}</text>
-      <text class="projection-label" x="${width - 48}" y="${Math.min(yFor(finalPoint.cumulative) + 59, pad.top + innerHeight - 11)}">Proyección desde Marzo</text>
+      <text class="projection-value" x="${width - 24}" y="${Math.min(yFor(finalPoint.cumulative) + 62, pad.top + innerHeight - 28)}">${projectedTotal.toLocaleString("es-CL")}</text>
+      <text class="projection-label" x="${width - 24}" y="${Math.min(yFor(finalPoint.cumulative) + 79, pad.top + innerHeight - 11)}">Proyección desde Marzo</text>
       <circle class="projection-dot-recent" cx="${xFor(recentFinalPoint)}" cy="${yFor(recentFinalPoint.cumulative)}" r="4">
         <title>Proyección desde junio: ${recentProjectedTotal} salidas al 11 de marzo de 2030</title>
       </circle>
@@ -482,6 +585,9 @@ function renderRegionMap(items) {
   const orderedFeatures = regionMapOrder
     .map(([region]) => featuresByRegion.get(region))
     .filter(Boolean);
+  const selectedCases = selectedRegion
+    ? sortByDateDesc(items.filter((item) => item.region_group === selectedRegion))
+    : [];
 
   els.regionMapHint.textContent = `Excluye ${centralCount} casos de Gobierno central`;
   if (!regionGeo || orderedFeatures.length === 0) {
@@ -497,8 +603,9 @@ function renderRegionMap(items) {
           const region = feature.region;
           const count = counts[region] || 0;
           const level = regionLevel(count, max);
+          const isSelected = selectedRegion === region;
           return `
-            <path class="map-region level-${level}" d="${escapeHtml(feature.path)}" tabindex="0">
+            <path class="map-region level-${level}${isSelected ? " is-selected" : ""}" d="${escapeHtml(feature.path)}" tabindex="0" role="button" aria-pressed="${isSelected ? "true" : "false"}" data-region="${escapeHtml(region)}" aria-label="${escapeHtml(`${region}: ${count} casos. Ver cargos de la región`)}">
               <title>${escapeHtml(region)}: ${count} casos</title>
             </path>
           `;
@@ -524,7 +631,58 @@ function renderRegionMap(items) {
       <span>Más</span>
     </div>
     <p class="map-note">Geometría regional simplificada a partir de mapas vectoriales BCN.</p>
+    <div class="map-selection" aria-live="polite">
+      ${selectedRegion ? `
+        <div class="map-selection-head">
+          <div>
+            <span>Región seleccionada</span>
+            <strong>${escapeHtml(selectedRegion)}</strong>
+          </div>
+          <button type="button" data-clear-region>Limpiar selección</button>
+        </div>
+        ${selectedCases.length ? `
+          <div class="map-case-list">
+            ${selectedCases.map((item) => `
+              <article>
+                <div>
+                  <strong>${escapeHtml(item.person_name)}</strong>
+                  <span>${escapeHtml(item.office_title)} · ${escapeHtml(item.ministerio_master || item.ministry)} · ${formatDate(item.exit_date)}</span>
+                </div>
+                ${item.source?.url ? `<a href="${escapeHtml(sourceHref(item))}" target="_blank" rel="noopener" title="${escapeHtml(item.source?.title || "Abrir fuente")}">Abrir nota</a>` : ""}
+              </article>
+            `).join("")}
+          </div>
+        ` : `<p class="map-note">No hay cargos regionales registrados para esta selección.</p>`}
+      ` : `
+        <p class="map-note">Selecciona una región del mapa para ver los cargos asociados.</p>
+      `}
+    </div>
   `;
+}
+
+function bindMapSelection() {
+  els.regionMap.addEventListener("click", (event) => {
+    const clearButton = event.target.closest("[data-clear-region]");
+    if (clearButton) {
+      selectedRegion = "";
+      renderRegionMap(cases);
+      return;
+    }
+
+    const regionPath = event.target.closest(".map-region[data-region]");
+    if (!regionPath) return;
+    selectedRegion = selectedRegion === regionPath.dataset.region ? "" : regionPath.dataset.region;
+    renderRegionMap(cases);
+  });
+
+  els.regionMap.addEventListener("keydown", (event) => {
+    if (!["Enter", " "].includes(event.key)) return;
+    const regionPath = event.target.closest(".map-region[data-region]");
+    if (!regionPath) return;
+    event.preventDefault();
+    selectedRegion = selectedRegion === regionPath.dataset.region ? "" : regionPath.dataset.region;
+    renderRegionMap(cases);
+  });
 }
 
 function renderCases(items) {
@@ -671,25 +829,11 @@ async function boot() {
   regionGeo = await geoResponse.json();
   metadata = payload.metadata || {};
   cases = sortByDateDesc(payload.cases);
-  const latest = cases[0];
 
   els.updatedLabel.textContent = `Actualizado al ${formatDate(payload.metadata.updated_at)}`;
   els.totalCount.textContent = payload.metadata.case_count;
-  els.latestTitle.textContent = latest.person_name;
-  els.latestMeta.textContent = `${latest.office_title} · ${latest.region} · ${formatDate(latest.exit_date)}`;
-  if (latest.source?.url) {
-    els.latestSource.href = sourceHref(latest);
-    els.latestSource.textContent = `Abrir nota · ${latest.source.outlet}`;
-    els.latestSource.target = "_blank";
-    els.latestSource.title = latest.source?.title || `Abrir fuente en ${latest.source.outlet}`;
-  } else {
-    els.latestSource.removeAttribute("href");
-    els.latestSource.removeAttribute("target");
-    els.latestSource.textContent = `Sin URL publica · ${latest.source?.outlet || "fuente"}`;
-    els.latestSource.title = latest.source?.title || "Este caso no trae URL publica en la base.";
-    els.latestSource.classList.add("source-static");
-  }
 
+  renderPaceFacts(cases);
   renderStats(cases);
   renderTimelineChart(cases);
   renderProjectionChart(cases);
@@ -707,6 +851,7 @@ async function boot() {
   els.ministryFilter.addEventListener("change", renderFiltered);
   els.regionFilter.addEventListener("change", renderFiltered);
   bindRoleFilters();
+  bindMapSelection();
 }
 
 boot().catch((error) => {

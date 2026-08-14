@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600;1,700&family=Libre+Baskerville:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=legibility-1">
+  <link rel="stylesheet" href="styles.css?v=ritmo-mapa-1">
 </head>
 <body>
   <header class="site-head">
@@ -48,11 +48,11 @@
             </div>
           </div>
         </div>
-        <aside class="latest-card" aria-labelledby="latestTitle">
-          <p class="eyebrow">Ultima salida registrada</p>
-          <h2 id="latestTitle">Cargando...</h2>
-          <p id="latestMeta"></p>
-          <a id="latestSource" class="source-link" href="#" target="_blank" rel="noopener">Abrir fuente</a>
+        <aside class="latest-card pace-card" aria-labelledby="paceTitle">
+          <p class="eyebrow">Promedios semanales</p>
+          <h2 id="paceTitle">El ritmo</h2>
+          <div class="pace-facts" id="paceFacts"></div>
+          <p class="pace-note" id="paceNote">Calculando...</p>
         </aside>
       </div>
     </section>
@@ -140,8 +140,8 @@
     <section id="metodologia" class="section methodology">
       <div class="wrap">
         <p class="eyebrow">Criterio editorial</p>
-        <h2>Que entra al contador</h2>
-        <p>El conteo incluye renuncias, remociones y nombramientos que no llegaron a concretarse. La base publica se genera desde la pestaña Master del archivo editorial y excluye filas pendientes, duplicadas o marcadas para no contar.</p>
+        <h2>Qué entra al contador</h2>
+        <p>El conteo incluye salidas confirmadas de autoridades y cargos de confianza: renuncias, remociones y nombramientos que no llegaron a concretarse. La descarga pública contiene una versión limpia de la base, sin filas pendientes ni casos no confirmados.</p>
       </div>
     </section>
   </main>
@@ -153,6 +153,6 @@
     </div>
   </footer>
 
-  <script src="app.js?v=datos-2026-08-15-1"></script>
+  <script src="app.js?v=ritmo-mapa-1"></script>
 </body>
 </html>

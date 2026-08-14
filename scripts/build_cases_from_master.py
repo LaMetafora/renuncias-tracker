@@ -354,6 +354,39 @@ def reason_category(row: dict[str, Any], summary: str | None) -> str:
     return "not_specified"
 
 
+def public_summary(row: dict[str, Any], *fallbacks: Any) -> str:
+    generic = {
+        "nombramiento sin efecto",
+        "remocion",
+        "renuncia",
+        "renuncia no voluntaria",
+        "renuncia solicitada",
+    }
+    candidates = [
+        row.get("resumen_factiva"),
+        row.get("evidence"),
+        row.get("notes"),
+        *fallbacks,
+        row.get("razon_renunciaskast"),
+        row.get("titular_factiva"),
+    ]
+
+    for value in candidates:
+        text = clean_text(value)
+        if not text:
+            continue
+        normalized = normalize_lookup_key(text)
+        if normalized in generic:
+            continue
+        text = re.sub(r"\bEl\s+raw[_\s-]?\d+\s+", "La nota ", text, flags=re.IGNORECASE)
+        text = re.sub(r"\b(?:raw|row|fila)[_\s-]?\d+\b", "la nota", text, flags=re.IGNORECASE)
+        text = re.sub(r"\s+", " ", text).strip(" .;")
+        if text:
+            return text if text.endswith((".", "?", "!")) else f"{text}."
+
+    return "Salida registrada por la base editorial, sin detalle público adicional."
+
+
 def source_for(row: dict[str, Any], overrides: dict[str, dict[str, str | None]]) -> dict[str, str | None]:
     override = overrides.get(clean_text(row.get("master_id")) or "")
     url = clean_text(row.get("url_renunciaskast"))
@@ -423,7 +456,7 @@ def build() -> dict[str, Any]:
             if is_excluded_case(row, name):
                 continue
             date_value = iso_date(row.get("exit_date"))
-            summary = clean_text(row.get("evidence")) or clean_text(row.get("notes")) or "Sin motivo publico detallado."
+            summary = public_summary(row)
             raw_cargo = clean_text(row.get("position")) or clean_text(row.get("rank"))
             level = office_level_from_rank(clean_text(row.get("rank")) or raw_cargo)
             cargo_group = cargo_group_from_level(level)
@@ -466,7 +499,7 @@ def build() -> dict[str, Any]:
             continue
 
         date_value = iso_date(row.get("fecha_salida_master") or row.get("fecha_factiva") or row.get("fecha_renunciaskast"))
-        summary = clean_text(row.get("razon_renunciaskast")) or clean_text(row.get("resumen_factiva")) or clean_text(row.get("titular_factiva"))
+        summary = public_summary(row)
         raw_cargo = clean_text(row.get("cargo_master")) or clean_text(row.get("cargo"))
         cargo_group = clean_text(row.get("cargo")) or raw_cargo or "Otros cargos"
         region = clean_text(row.get("region_master")) or "Nacional"
