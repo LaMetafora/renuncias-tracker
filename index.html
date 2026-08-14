@@ -86,10 +86,18 @@
             <p class="eyebrow">Archivo</p>
             <h2>El registro caso a caso</h2>
           </div>
-          <label class="search">
-            <span>Buscar</span>
-            <input id="searchInput" type="search" placeholder="Nombre, region, ministerio..." autocomplete="off">
-          </label>
+          <div class="registry-tools">
+            <div class="role-filters" id="roleFilters" aria-label="Filtrar por cargo">
+              <button type="button" data-role-filter="minister" aria-pressed="false">Ministros <span></span></button>
+              <button type="button" data-role-filter="seremi" aria-pressed="false">Seremis <span></span></button>
+              <button type="button" data-role-filter="subsecretary" aria-pressed="false">Subsecretarios <span></span></button>
+              <button type="button" data-role-filter="other" aria-pressed="false">Otros cargos <span></span></button>
+            </div>
+            <label class="search">
+              <span>Buscar</span>
+              <input id="searchInput" type="search" placeholder="Nombre, region, ministerio..." autocomplete="off">
+            </label>
+          </div>
         </div>
         <div class="case-list" id="caseList"></div>
       </div>

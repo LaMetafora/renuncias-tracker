@@ -40,11 +40,13 @@ const els = {
   reasonBars: document.querySelector("#reasonBars"),
   officeHint: document.querySelector("#officeHint"),
   caseList: document.querySelector("#caseList"),
+  roleFilters: document.querySelector("#roleFilters"),
   searchInput: document.querySelector("#searchInput")
 };
 
 let cases = [];
 let metadata = {};
+let activeRoleFilter = "";
 
 function byCount(items, key) {
   return items.reduce((acc, item) => {
@@ -133,6 +135,36 @@ function renderCases(items) {
   `).join("");
 }
 
+function roleFilterKey(item) {
+  if (item.office_level === "minister") return "minister";
+  if (item.office_level === "seremi") return "seremi";
+  if (item.office_level === "subsecretary") return "subsecretary";
+
+  if (item.cargo_group === "Ministro/a") return "minister";
+  if (item.cargo_group === "Seremi") return "seremi";
+  if (item.cargo_group === "Subsecretario/a") return "subsecretary";
+
+  return "other";
+}
+
+function updateRoleFilterCounts() {
+  const counts = byCount(cases.map((item) => ({ role_filter: roleFilterKey(item) })), "role_filter");
+  els.roleFilters.querySelectorAll("button").forEach((button) => {
+    const key = button.dataset.roleFilter;
+    const count = counts[key] || 0;
+    const countSlot = button.querySelector("span");
+    countSlot.textContent = count;
+  });
+}
+
+function updateRoleFilterState() {
+  els.roleFilters.querySelectorAll("button").forEach((button) => {
+    const isActive = button.dataset.roleFilter === activeRoleFilter;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
 function sourceHref(item) {
   return item.source?.url || "";
 }
@@ -153,6 +185,10 @@ function sourceMarkup(item) {
 function renderFiltered() {
   const query = els.searchInput.value.trim().toLowerCase();
   const filtered = cases.filter((item) => {
+    if (activeRoleFilter && roleFilterKey(item) !== activeRoleFilter) {
+      return false;
+    }
+
     const haystack = [
       item.person_name,
       item.office_title,
@@ -166,6 +202,18 @@ function renderFiltered() {
   });
 
   renderCases(filtered);
+}
+
+function bindRoleFilters() {
+  els.roleFilters.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-role-filter]");
+    if (!button) return;
+
+    const nextFilter = button.dataset.roleFilter;
+    activeRoleFilter = activeRoleFilter === nextFilter ? "" : nextFilter;
+    updateRoleFilterState();
+    renderFiltered();
+  });
 }
 
 async function boot() {
@@ -196,9 +244,12 @@ async function boot() {
   renderBars(els.officeBars, byCount(cases, "cargo_group"), {});
   renderBars(els.reasonBars, byCount(cases, "region_group"), {});
   els.officeHint.textContent = `${cases.length} casos`;
+  updateRoleFilterCounts();
+  updateRoleFilterState();
   renderCases(cases);
 
   els.searchInput.addEventListener("input", renderFiltered);
+  bindRoleFilters();
 }
 
 boot().catch((error) => {
