@@ -128,8 +128,7 @@ a {
 }
 
 .tracker-card::before,
-.latest-card::before,
-.panel::before {
+.timeline-panel::before {
   content: "";
   position: absolute;
   inset: 0;
