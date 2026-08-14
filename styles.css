@@ -22,7 +22,7 @@ html {
 body {
   margin: 0;
   background:
-    url("assets/nuevo/seamless_test/M_pattern_seamless_transparent.png"),
+    url("assets/nuevo/seamless_test/M_pattern_seamless_transparent_v2.png"),
     radial-gradient(circle at 18px 18px, rgba(7, 27, 61, 0.07) 1px, transparent 1.5px),
     linear-gradient(90deg, rgba(7, 27, 61, 0.045) 1px, transparent 1px),
     linear-gradient(180deg, rgba(7, 27, 61, 0.04) 1px, transparent 1px),
@@ -130,7 +130,7 @@ a {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: url("assets/nuevo/seamless_test/M_pattern_seamless_transparent.png");
+  background-image: url("assets/nuevo/seamless_test/M_pattern_seamless_transparent_v2.png");
   background-size: 244px 381px;
   opacity: 0.18;
   pointer-events: none;
