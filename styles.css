@@ -459,6 +459,42 @@ h3 {
   overflow-wrap: anywhere;
 }
 
+.bar-toggle {
+  width: 100%;
+  padding: 0;
+  color: var(--danger);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.bar-row-toggle .bar-fill {
+  background: var(--danger);
+}
+
+.bar-sublist {
+  display: grid;
+  gap: 9px;
+  margin-top: -2px;
+  padding: 10px 0 2px 14px;
+  border-left: 2px solid rgba(182, 32, 45, 0.22);
+}
+
+.bar-row-sub {
+  opacity: 0.86;
+}
+
+.bar-row-sub .bar-label,
+.bar-row-sub .bar-count {
+  font-size: 12px;
+}
+
+.bar-row-sub .bar-fill {
+  background: var(--navy-soft);
+}
+
 .bar-track {
   height: 12px;
   background: var(--wash);

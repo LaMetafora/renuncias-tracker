@@ -74,10 +74,13 @@ let metadata = {};
 let regionGeo = null;
 let activeRoleFilter = "";
 let selectedRegion = "";
+let ministriesExpanded = false;
 
 const MANDATE_END = "2030-03-11";
 const JUNE_PROJECTION_START_WEEK = 13;
 const JUNE_PROJECTION_END_WEEK = 22;
+const MINISTRY_VISIBLE_THRESHOLD = 5;
+const OTHER_MINISTRIES_LABEL = "Otros Ministerios";
 
 function byCount(items, key) {
   return items.reduce((acc, item) => {
@@ -560,6 +563,56 @@ function renderBars(container, counts, labels) {
   `).join("");
 }
 
+function ministryShortLabel(name) {
+  return name.replace(/^Ministerio (de las|de la|del|de|Secretaría General de) /, "");
+}
+
+function groupedMinistryCounts(items) {
+  const entries = Object.entries(byCount(items, "ministerio_master"))
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"));
+  const visible = entries.filter(([, value]) => value > MINISTRY_VISIBLE_THRESHOLD);
+  const hidden = entries.filter(([, value]) => value <= MINISTRY_VISIBLE_THRESHOLD);
+  const otherTotal = hidden.reduce((sum, [, value]) => sum + value, 0);
+  const rows = otherTotal
+    ? [...visible, [OTHER_MINISTRIES_LABEL, otherTotal]]
+    : visible;
+
+  return { rows, hidden, expanded: ministriesExpanded && hidden.length > 0 };
+}
+
+function renderMinistryBars(items) {
+  const { rows, hidden, expanded } = groupedMinistryCounts(items);
+  const visibleMax = Math.max(...rows.map((entry) => entry[1]), 1);
+  const hiddenMax = Math.max(...hidden.map((entry) => entry[1]), 1);
+
+  els.officeBars.innerHTML = rows.map(([key, value]) => {
+    const isOther = key === OTHER_MINISTRIES_LABEL;
+    return `
+      <div class="bar-row ${isOther ? "bar-row-toggle" : ""}">
+        <${isOther ? "button" : "div"} class="bar-label ${isOther ? "bar-toggle" : ""}" ${isOther ? `type="button" aria-expanded="${expanded}" data-ministry-toggle="others"` : ""}>
+          ${escapeHtml(isOther ? `${key} ${expanded ? "−" : "+"}` : ministryShortLabel(key))}
+        </${isOther ? "button" : "div"}>
+        <div class="bar-track" aria-hidden="true">
+          <div class="bar-fill" style="width:${(value / visibleMax) * 100}%"></div>
+        </div>
+        <div class="bar-count">${value}</div>
+      </div>
+    `;
+  }).join("") + (expanded ? `
+    <div class="bar-sublist">
+      ${hidden.map(([key, value]) => `
+        <div class="bar-row bar-row-sub">
+          <div class="bar-label">${escapeHtml(ministryShortLabel(key))}</div>
+          <div class="bar-track" aria-hidden="true">
+            <div class="bar-fill" style="width:${(value / hiddenMax) * 100}%"></div>
+          </div>
+          <div class="bar-count">${value}</div>
+        </div>
+      `).join("")}
+    </div>
+  ` : "");
+}
+
 function regionLevel(value, max) {
   if (value === 0) return 0;
   return Math.max(1, Math.ceil((value / Math.max(max, 1)) * 5));
@@ -832,9 +885,9 @@ async function boot() {
   renderProjectionChart(cases);
   setupChartModeControls();
   setChartMode("accumulated");
-  renderBars(els.officeBars, byCount(cases, "ministerio_master"), {});
+  renderMinistryBars(cases);
   renderRegionMap(cases);
-  els.officeHint.textContent = `${cases.length} casos`;
+  els.officeHint.textContent = `Ministerios con más de ${MINISTRY_VISIBLE_THRESHOLD} casos`;
   populateRegistryFilters();
   updateRoleFilterCounts();
   updateRoleFilterState();
@@ -843,6 +896,12 @@ async function boot() {
   els.searchInput.addEventListener("input", renderFiltered);
   els.ministryFilter.addEventListener("change", renderFiltered);
   els.regionFilter.addEventListener("change", renderFiltered);
+  els.officeBars.addEventListener("click", (event) => {
+    const toggle = event.target.closest("[data-ministry-toggle='others']");
+    if (!toggle) return;
+    ministriesExpanded = !ministriesExpanded;
+    renderMinistryBars(cases);
+  });
   bindRoleFilters();
   bindMapSelection();
 }
