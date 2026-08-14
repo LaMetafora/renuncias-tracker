@@ -22,12 +22,13 @@ html {
 body {
   margin: 0;
   background:
+    linear-gradient(rgba(247, 246, 241, 0.72), rgba(247, 246, 241, 0.72)),
     url("assets/nuevo/seamless_test/M_pattern_seamless_transparent_v2.png"),
     radial-gradient(circle at 18px 18px, rgba(7, 27, 61, 0.07) 1px, transparent 1.5px),
     linear-gradient(90deg, rgba(7, 27, 61, 0.045) 1px, transparent 1px),
     linear-gradient(180deg, rgba(7, 27, 61, 0.04) 1px, transparent 1px),
     var(--paper);
-  background-size: 305px 476px, 22px 22px, 44px 44px, 44px 44px;
+  background-size: auto, 305px 476px, 22px 22px, 44px 44px, 44px 44px;
   color: var(--ink);
   font-family: "Libre Baskerville", Georgia, serif;
   line-height: 1.45;
@@ -85,8 +86,9 @@ a {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  color: var(--navy-soft);
-  font-size: 12px;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .nav a {
@@ -132,7 +134,7 @@ a {
   inset: 0;
   background-image: url("assets/nuevo/seamless_test/M_pattern_seamless_transparent_v2.png");
   background-size: 244px 381px;
-  opacity: 0.18;
+  opacity: 0.08;
   pointer-events: none;
 }
 
@@ -200,7 +202,8 @@ h3 {
   max-width: 62ch;
   margin: 0;
   color: #1c2c46;
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .latest-card {
@@ -217,7 +220,8 @@ h3 {
 .eyebrow {
   margin-bottom: 8px;
   color: var(--danger);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -268,7 +272,7 @@ h3 {
 .section-head h2 {
   margin: 0;
   color: var(--navy);
-  font-size: 40px;
+  font-size: 44px;
   font-style: italic;
   line-height: 1;
 }
@@ -337,15 +341,17 @@ h3 {
 
 .chart-owner {
   margin: 4px 0 0;
-  color: var(--muted);
+  color: var(--navy-soft);
   font-family: "Space Mono", ui-monospace, monospace;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
 .panel-head span {
-  color: var(--muted);
-  font-size: 13px;
+  color: var(--navy-soft);
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .bars {
@@ -590,8 +596,9 @@ h3 {
 }
 
 .map-summary {
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--navy-soft);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .map-summary strong {
@@ -640,9 +647,10 @@ h3 {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--muted);
+  color: var(--navy-soft);
   font-family: "Space Mono", ui-monospace, monospace;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -655,8 +663,9 @@ h3 {
 
 .map-note {
   margin: 0;
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--navy-soft);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .table-head {
@@ -682,8 +691,9 @@ h3 {
 .select-field {
   display: grid;
   gap: 6px;
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--navy-soft);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .select-field span {
@@ -719,7 +729,7 @@ h3 {
   color: var(--navy);
   cursor: pointer;
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   padding: 8px 10px;
   text-transform: uppercase;
@@ -746,8 +756,9 @@ h3 {
 .search {
   display: grid;
   gap: 6px;
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--navy-soft);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .search span {
@@ -847,6 +858,8 @@ h3 {
   max-width: 76ch;
   margin-bottom: 0;
   color: #433b66;
+  font-size: 17px;
+  font-weight: 700;
 }
 
 footer {
@@ -857,8 +870,9 @@ footer {
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--navy-soft);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .footer-grid a {

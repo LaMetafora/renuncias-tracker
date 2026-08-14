@@ -4,20 +4,23 @@ import json
 import re
 import unicodedata
 from collections import Counter
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font, PatternFill
 
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKBOOK_PATTERN = "contador de renuncias,*"
+WORKBOOK_PATTERNS = ("Contador de renuncias*.xlsx", "contador de renuncias,*")
 OUTPUT = ROOT / "data" / "cases.json"
+PUBLIC_DOWNLOAD = ROOT / "data" / "base_renuncias_descarga_publica.xlsx"
 SOURCE_OVERRIDES = ROOT / "data" / "source_overrides.json"
 GOVERNMENT_START = date(2026, 3, 11)
 
 INCLUDE_RECOMMENDATIONS = {
+    "confirmed",
     "add_to_core_counter",
     "confirmed_from_raw_3",
     "appointment_not_effective",
@@ -80,6 +83,7 @@ MINISTRY_ALIASES = {
     "mineria": "Ministerio de Minería",
     "mujer y equidad de genero": "Ministerio de la Mujer y la Equidad de Género",
     "obras publicas": "Ministerio de Obras Públicas",
+    "relaciones exteriores": "Ministerio de Relaciones Exteriores",
     "salud": "Ministerio de Salud",
     "secretaria general de gobierno": "Ministerio Secretaría General de Gobierno",
     "seguridad": "Ministerio de Seguridad Pública",
@@ -91,6 +95,23 @@ MINISTRY_ALIASES = {
 }
 
 NEW_COUNT_STATUSES = {"confirmed_named"}
+EXCLUDED_PERSON_KEYS = {"marcelo araya"}
+EXCLUDED_CASE_IDS = {"pw-090-marcelo-araya"}
+SPANISH_MONTHS = {
+    "enero": 1,
+    "febrero": 2,
+    "marzo": 3,
+    "abril": 4,
+    "mayo": 5,
+    "junio": 6,
+    "julio": 7,
+    "agosto": 8,
+    "septiembre": 9,
+    "setiembre": 9,
+    "octubre": 10,
+    "noviembre": 11,
+    "diciembre": 12,
+}
 
 
 def strip_accents(value: str) -> str:
@@ -115,14 +136,31 @@ def load_source_overrides() -> dict[str, dict[str, str | None]]:
 
 
 def latest_workbook() -> Path:
-    candidates = [
-        path
-        for path in (ROOT / "data").glob(WORKBOOK_PATTERN)
-        if path.suffix.lower() in {".xlsx", ".xlsm"} and not path.name.startswith("~$")
-    ]
+    candidates = []
+    for pattern in WORKBOOK_PATTERNS:
+        candidates.extend(
+            path
+            for path in (ROOT / "data").glob(pattern)
+            if path.suffix.lower() in {".xlsx", ".xlsm"} and not path.name.startswith("~$")
+        )
     if not candidates:
         raise FileNotFoundError("No se encontro una base contador de renuncias en data/")
-    return max(candidates, key=lambda path: path.stat().st_mtime)
+    return max(candidates, key=workbook_sort_key)
+
+
+def workbook_sort_key(path: Path) -> tuple[date, float]:
+    return date_from_workbook_name(path.name) or date.min, path.stat().st_mtime
+
+
+def date_from_workbook_name(name: str) -> date | None:
+    text = normalize_lookup_key(name)
+    match = re.search(r"\b(\d{1,2})\s+(?:de\s+)?([a-z]+)\b", text)
+    if not match:
+        return None
+    month = SPANISH_MONTHS.get(match.group(2))
+    if not month:
+        return None
+    return date(2026, month, int(match.group(1)))
 
 
 def existing_sources_by_name() -> dict[str, dict[str, str | None]]:
@@ -206,6 +244,11 @@ def ministry_from_master(row: dict[str, Any]) -> str:
         case_id = clean_text(row.get("master_id")) or "sin_id"
         raise ValueError(f"Ministerio master invalido en {case_id}: {raw!r}")
     return ministry
+
+
+def is_excluded_case(row: dict[str, Any], name: str | None) -> bool:
+    case_id = clean_text(row.get("master_id")) or clean_text(row.get("id"))
+    return (case_id in EXCLUDED_CASE_IDS) or (normalize_lookup_key(name) in EXCLUDED_PERSON_KEYS)
 
 
 def office_level_from_rank(rank: str | None) -> str:
@@ -377,6 +420,8 @@ def build() -> dict[str, Any]:
             name = clean_text(row.get("name"))
             if not name:
                 continue
+            if is_excluded_case(row, name):
+                continue
             date_value = iso_date(row.get("exit_date"))
             summary = clean_text(row.get("evidence")) or clean_text(row.get("notes")) or "Sin motivo publico detallado."
             raw_cargo = clean_text(row.get("position")) or clean_text(row.get("rank"))
@@ -417,6 +462,8 @@ def build() -> dict[str, Any]:
         name = clean_text(row.get("nombre_master"))
         if not name:
             continue
+        if is_excluded_case(row, name):
+            continue
 
         date_value = iso_date(row.get("fecha_salida_master") or row.get("fecha_factiva") or row.get("fecha_renunciaskast"))
         summary = clean_text(row.get("razon_renunciaskast")) or clean_text(row.get("resumen_factiva")) or clean_text(row.get("titular_factiva"))
@@ -453,7 +500,11 @@ def build() -> dict[str, Any]:
     cargo_counts = Counter(item["cargo_group"] for item in cases)
     ministry_counts = Counter(item["ministerio_master"] for item in cases)
     region_counts = Counter(item["region_group"] for item in cases)
-    updated_at = updated_at_from_summary(wb, max((datetime.fromisoformat(item["exit_date"]).date() for item in cases if item.get("exit_date")), default=date.today()))
+    fallback_updated_at = date_from_workbook_name(workbook.name) or max(
+        (datetime.fromisoformat(item["exit_date"]).date() for item in cases if item.get("exit_date")),
+        default=date.today(),
+    )
+    updated_at = updated_at_from_summary(wb, fallback_updated_at)
     updated_date = datetime.fromisoformat(updated_at).date()
     weeks_elapsed = government_weeks_elapsed(GOVERNMENT_START, updated_date)
     resignations_per_week = round(len(cases) / weeks_elapsed, 3) if weeks_elapsed else None
@@ -478,7 +529,43 @@ def build() -> dict[str, Any]:
     }
 
 
+def write_public_download(payload: dict[str, Any]) -> None:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Base limpia"
+    headers = ["Nombre", "cargo", "ministerio", "region", "fecha de salida", "url"]
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="071B3D")
+
+    for case in payload["cases"]:
+        ws.append(
+            [
+                case.get("person_name"),
+                case.get("office_title"),
+                case.get("ministerio_master"),
+                case.get("region"),
+                case.get("exit_date"),
+                (case.get("source") or {}).get("url"),
+            ]
+        )
+        url_cell = ws.cell(ws.max_row, 6)
+        if url_cell.value:
+            url_cell.hyperlink = url_cell.value
+            url_cell.style = "Hyperlink"
+
+    widths = [28, 44, 42, 24, 16, 68]
+    for idx, width in enumerate(widths, start=1):
+        ws.column_dimensions[chr(64 + idx)].width = width
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
+    wb.save(PUBLIC_DOWNLOAD)
+
+
 if __name__ == "__main__":
     payload = build()
     OUTPUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Wrote {OUTPUT} with {payload['metadata']['case_count']} cases")
+    write_public_download(payload)
+    print(f"Wrote {PUBLIC_DOWNLOAD}")
