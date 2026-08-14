@@ -250,6 +250,7 @@ function renderProjectionChart(items) {
   const observedWeeks = Math.max(metadata.government_weeks_elapsed || Math.floor(daysBetween(start, current) / 7) + 1, 1);
   const totalWeeks = Math.max(Math.floor(daysBetween(start, mandateEnd) / 7) + 1, observedWeeks);
   const recentStartWeek = 13;
+  const recentEndWeek = Math.min(22, observedWeeks);
   const weeklyRate = items.length / observedWeeks;
   const projectedTotal = Math.round(weeklyRate * totalWeeks);
   const totalDays = Math.max(daysBetween(start, mandateEnd), 1);
@@ -284,7 +285,7 @@ function renderProjectionChart(items) {
   const projectedPoints = [
     { label: "Actual", start: current, end: current, count: 0, cumulative: items.length }
   ];
-  const recentWeeks = observedWeeksList.slice(recentStartWeek - 1);
+  const recentWeeks = observedWeeksList.slice(recentStartWeek - 1, recentEndWeek);
   const recentCount = recentWeeks.reduce((sum, week) => sum + week.count, 0);
   const recentWeeklyRate = recentWeeks.length ? recentCount / recentWeeks.length : weeklyRate;
   const recentProjectedPoints = [
@@ -342,7 +343,7 @@ function renderProjectionChart(items) {
     monthIndex += 1;
   }
 
-  els.timelineHint.dataset.projectionText = `Si todo sigue igual: ${projectedTotal.toLocaleString("es-CL")} renuncias; ritmo S13+: ${recentProjectedTotal.toLocaleString("es-CL")} al 11 de marzo de 2030`;
+  els.timelineHint.dataset.projectionText = `Promedio desde marzo: ${projectedTotal.toLocaleString("es-CL")}; proyección desde junio: ${recentProjectedTotal.toLocaleString("es-CL")} al 11 de marzo de 2030`;
   els.projectionChart.innerHTML = `
     <svg class="timeline-svg projection-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Proyección de renuncias acumuladas hasta el 11 de marzo de 2030">
       <title>Proyección de renuncias acumuladas hasta el 11 de marzo de 2030</title>
@@ -371,12 +372,12 @@ function renderProjectionChart(items) {
         <title>Proyección al 11 de marzo de 2030: ${projectedTotal} salidas</title>
       </circle>
       <text class="projection-value" x="${width - 48}" y="${Math.min(yFor(finalPoint.cumulative) + 42, pad.top + innerHeight - 28)}">${projectedTotal.toLocaleString("es-CL")}</text>
-      <text class="projection-label" x="${width - 48}" y="${Math.min(yFor(finalPoint.cumulative) + 59, pad.top + innerHeight - 11)}">proyectadas</text>
+      <text class="projection-label" x="${width - 48}" y="${Math.min(yFor(finalPoint.cumulative) + 59, pad.top + innerHeight - 11)}">Promedio desde Marzo</text>
       <circle class="projection-dot-recent" cx="${xFor(recentFinalPoint)}" cy="${yFor(recentFinalPoint.cumulative)}" r="4">
-        <title>Proyección con ritmo S13+: ${recentProjectedTotal} salidas al 11 de marzo de 2030</title>
+        <title>Proyección desde junio: ${recentProjectedTotal} salidas al 11 de marzo de 2030</title>
       </circle>
-      <text class="projection-value projection-value-recent" x="${width - 48}" y="${Math.min(yFor(recentFinalPoint.cumulative) + 21, pad.top + innerHeight - 28)}">${recentProjectedTotal.toLocaleString("es-CL")}</text>
-      <text class="projection-label projection-label-recent" x="${width - 48}" y="${Math.min(yFor(recentFinalPoint.cumulative) + 38, pad.top + innerHeight - 11)}">S13+</text>
+      <text class="projection-value projection-value-recent" x="${width - 48}" y="${Math.min(yFor(recentFinalPoint.cumulative) + 48, pad.top + innerHeight - 28)}">${recentProjectedTotal.toLocaleString("es-CL")}</text>
+      <text class="projection-label projection-label-recent" x="${width - 48}" y="${Math.min(yFor(recentFinalPoint.cumulative) + 65, pad.top + innerHeight - 11)}">Proyección desde Junio</text>
     </svg>
   `;
 }
