@@ -57,6 +57,8 @@ const els = {
   stats: document.querySelector("#stats"),
   timelineChart: document.querySelector("#timelineChart"),
   timelineHint: document.querySelector("#timelineHint"),
+  projectionChart: document.querySelector("#projectionChart"),
+  projectionHint: document.querySelector("#projectionHint"),
   officeBars: document.querySelector("#officeBars"),
   regionMap: document.querySelector("#regionMap"),
   regionMapHint: document.querySelector("#regionMapHint"),
@@ -72,6 +74,8 @@ let cases = [];
 let metadata = {};
 let regionGeo = null;
 let activeRoleFilter = "";
+
+const MANDATE_END = "2030-03-11";
 
 function byCount(items, key) {
   return items.reduce((acc, item) => {
@@ -232,6 +236,122 @@ function renderTimelineChart(items) {
           <title>${point.label}: ${formatDate(isoFromDate(point.start))} al ${formatDate(isoFromDate(point.end))}; ${point.count} salidas; ${point.cumulative} acumuladas</title>
         </circle>
       `).join("")}
+    </svg>
+  `;
+}
+
+function renderProjectionChart(items) {
+  const startISO = metadata.government_start || "2026-03-11";
+  const currentISO = metadata.updated_at || items[0]?.exit_date || startISO;
+  const start = dateFromISO(startISO);
+  const current = dateFromISO(currentISO);
+  const mandateEnd = dateFromISO(MANDATE_END);
+  const observedWeeks = Math.max(metadata.government_weeks_elapsed || Math.floor(daysBetween(start, current) / 7) + 1, 1);
+  const totalWeeks = Math.max(Math.floor(daysBetween(start, mandateEnd) / 7) + 1, observedWeeks);
+  const weeklyRate = items.length / observedWeeks;
+  const projectedTotal = Math.round(weeklyRate * totalWeeks);
+  const totalDays = Math.max(daysBetween(start, mandateEnd), 1);
+  const observedWeeksList = Array.from({ length: observedWeeks }, (_, index) => {
+    const weekStart = addDays(start, index * 7);
+    const weekEnd = addDays(weekStart, 6);
+    return {
+      index,
+      label: `S${index + 1}`,
+      start: weekStart,
+      end: weekEnd > current ? current : weekEnd,
+      count: 0
+    };
+  });
+
+  items
+    .filter((item) => item.exit_date >= startISO)
+    .forEach((item) => {
+      const weekIndex = Math.floor(daysBetween(start, dateFromISO(item.exit_date)) / 7);
+      if (observedWeeksList[weekIndex]) {
+        observedWeeksList[weekIndex].count += 1;
+      }
+    });
+
+  let cumulative = 0;
+  const observedPoints = [
+    { label: "Inicio", start, end: start, count: 0, cumulative: 0 }
+  ].concat(observedWeeksList.map((week) => {
+    cumulative += week.count;
+    return { ...week, cumulative };
+  }));
+  const projectedPoints = [
+    { label: "Actual", start: current, end: current, count: 0, cumulative: items.length }
+  ];
+
+  for (let index = observedWeeks; index < totalWeeks; index += 1) {
+    const weekStart = addDays(start, index * 7);
+    const weekEnd = addDays(weekStart, 6);
+    projectedPoints.push({
+      index,
+      label: `S${index + 1}`,
+      start: weekStart,
+      end: weekEnd > mandateEnd ? mandateEnd : weekEnd,
+      count: weeklyRate,
+      cumulative: weeklyRate * (index + 1)
+    });
+  }
+
+  const width = 720;
+  const height = 280;
+  const pad = { top: 18, right: 30, bottom: 44, left: 48 };
+  const innerWidth = width - pad.left - pad.right;
+  const innerHeight = height - pad.top - pad.bottom;
+  const maxValue = Math.max(projectedTotal, items.length, 1);
+  const xForDate = (dateValue) => pad.left + (Math.min(Math.max(daysBetween(start, dateValue), 0), totalDays) / totalDays) * innerWidth;
+  const xFor = (point) => xForDate(point.end);
+  const yFor = (value) => pad.top + innerHeight - (value / maxValue) * innerHeight;
+  const pathFor = (points) => points.map((point, index) => `${index === 0 ? "M" : "L"} ${xFor(point).toFixed(2)} ${yFor(point.cumulative).toFixed(2)}`).join(" ");
+  const observedPath = pathFor(observedPoints);
+  const projectedPath = pathFor(projectedPoints);
+  const finalPoint = projectedPoints[projectedPoints.length - 1];
+  const monthTicks = [];
+  const monthCursor = new Date(start.getFullYear(), start.getMonth(), 1, 12);
+  let monthIndex = 0;
+  while (monthCursor <= mandateEnd) {
+    const tickDate = monthCursor < start ? start : new Date(monthCursor);
+    monthTicks.push({
+      date: tickDate,
+      label: new Intl.DateTimeFormat("es-CL", { month: "short", year: "2-digit" }).format(tickDate),
+      showLabel: monthIndex % 6 === 0 || tickDate.getTime() === start.getTime()
+    });
+    monthCursor.setMonth(monthCursor.getMonth() + 1);
+    monthIndex += 1;
+  }
+
+  els.projectionHint.textContent = `Al ritmo actual: ${projectedTotal.toLocaleString("es-CL")} renuncias al 11 de marzo de 2030`;
+  els.projectionChart.innerHTML = `
+    <svg class="timeline-svg projection-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Proyección de renuncias acumuladas hasta el 11 de marzo de 2030">
+      <title>Proyección de renuncias acumuladas hasta el 11 de marzo de 2030</title>
+      <line class="timeline-axis" x1="${pad.left}" y1="${pad.top + innerHeight}" x2="${pad.left + innerWidth}" y2="${pad.top + innerHeight}"></line>
+      <line class="timeline-axis" x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${pad.top + innerHeight}"></line>
+      ${[0, Math.ceil(maxValue / 2), maxValue].map((value) => `
+        <g>
+          <line class="timeline-grid" x1="${pad.left}" y1="${yFor(value)}" x2="${pad.left + innerWidth}" y2="${yFor(value)}"></line>
+          <text class="timeline-y-label" x="${pad.left - 10}" y="${yFor(value) + 4}">${value}</text>
+        </g>
+      `).join("")}
+      ${monthTicks.map((tick) => `
+        <g>
+          <line class="timeline-month-grid" x1="${xForDate(tick.date)}" y1="${pad.top}" x2="${xForDate(tick.date)}" y2="${pad.top + innerHeight}"></line>
+          <line class="timeline-tick" x1="${xForDate(tick.date)}" y1="${pad.top + innerHeight}" x2="${xForDate(tick.date)}" y2="${pad.top + innerHeight + 5}"></line>
+          ${tick.showLabel ? `<text class="timeline-x-label" x="${xForDate(tick.date)}" y="${height - 12}">${tick.label}</text>` : ""}
+        </g>
+      `).join("")}
+      <path class="timeline-line" d="${observedPath}"></path>
+      <path class="timeline-line projection-line" d="${projectedPath}"></path>
+      <circle class="timeline-dot" cx="${xFor(observedPoints[observedPoints.length - 1])}" cy="${yFor(items.length)}" r="4">
+        <title>Actual: ${items.length} salidas al ${formatDate(currentISO)}</title>
+      </circle>
+      <circle class="projection-dot" cx="${xFor(finalPoint)}" cy="${yFor(finalPoint.cumulative)}" r="5">
+        <title>Proyección al 11 de marzo de 2030: ${projectedTotal} salidas</title>
+      </circle>
+      <text class="projection-value" x="${width - 26}" y="${yFor(finalPoint.cumulative) + 17}">${projectedTotal.toLocaleString("es-CL")}</text>
+      <text class="projection-label" x="${width - 26}" y="${yFor(finalPoint.cumulative) + 34}">proyectadas</text>
     </svg>
   `;
 }
@@ -479,6 +599,7 @@ async function boot() {
 
   renderStats(cases);
   renderTimelineChart(cases);
+  renderProjectionChart(cases);
   renderBars(els.officeBars, byCount(cases, "ministerio_master"), {});
   renderRegionMap(cases);
   els.officeHint.textContent = `${cases.length} casos`;

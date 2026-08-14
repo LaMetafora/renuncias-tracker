@@ -419,10 +419,38 @@ h3 {
   stroke-width: 3;
 }
 
+.projection-line {
+  stroke: var(--danger);
+  stroke-dasharray: 8 8;
+}
+
 .timeline-dot {
   fill: var(--danger);
   stroke: var(--sheet);
   stroke-width: 1.4;
+}
+
+.projection-dot {
+  fill: var(--sheet);
+  stroke: var(--danger);
+  stroke-width: 2;
+}
+
+.projection-value,
+.projection-label {
+  fill: var(--danger);
+  font-family: "Space Mono", ui-monospace, monospace;
+  text-anchor: end;
+}
+
+.projection-value {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.projection-label {
+  font-size: 11px;
+  text-transform: uppercase;
 }
 
 .timeline-x-label,
