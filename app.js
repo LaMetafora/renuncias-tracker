@@ -351,11 +351,8 @@ function renderProjectionChart(items) {
       <circle class="projection-dot" cx="${xFor(finalPoint)}" cy="${yFor(finalPoint.cumulative)}" r="5">
         <title>Proyección al 11 de marzo de 2030: ${projectedTotal} salidas</title>
       </circle>
-      <g transform="translate(${width - 58} ${Math.min(yFor(finalPoint.cumulative) + 62, pad.top + innerHeight - 14)})">
-        <rect class="projection-callout-bg" x="-118" y="-38" width="126" height="52"></rect>
-        <text class="projection-value" x="-10" y="-14">${projectedTotal.toLocaleString("es-CL")}</text>
-        <text class="projection-label" x="-10" y="4">proyectadas</text>
-      </g>
+      <text class="projection-value" x="${width - 48}" y="${Math.min(yFor(finalPoint.cumulative) + 42, pad.top + innerHeight - 28)}">${projectedTotal.toLocaleString("es-CL")}</text>
+      <text class="projection-label" x="${width - 48}" y="${Math.min(yFor(finalPoint.cumulative) + 59, pad.top + innerHeight - 11)}">proyectadas</text>
     </svg>
   `;
 }

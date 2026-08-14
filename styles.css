@@ -485,11 +485,6 @@ h3 {
   text-anchor: end;
 }
 
-.projection-callout-bg {
-  fill: rgba(255, 254, 250, 0.9);
-  stroke: rgba(182, 32, 45, 0.18);
-}
-
 .projection-value {
   font-size: 18px;
   font-weight: 700;
