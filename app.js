@@ -55,6 +55,8 @@ const els = {
   latestMeta: document.querySelector("#latestMeta"),
   latestSource: document.querySelector("#latestSource"),
   stats: document.querySelector("#stats"),
+  timelineChart: document.querySelector("#timelineChart"),
+  timelineHint: document.querySelector("#timelineHint"),
   officeBars: document.querySelector("#officeBars"),
   regionMap: document.querySelector("#regionMap"),
   regionMapHint: document.querySelector("#regionMapHint"),
@@ -101,15 +103,35 @@ function formatDate(dateString) {
   }).format(new Date(`${dateString}T12:00:00`));
 }
 
+function dateFromISO(dateString) {
+  return new Date(`${dateString}T12:00:00`);
+}
+
+function isoFromDate(dateValue) {
+  return dateValue.toISOString().slice(0, 10);
+}
+
+function addDays(dateValue, days) {
+  const next = new Date(dateValue);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function daysBetween(start, end) {
+  return Math.round((end - start) / 86400000);
+}
+
 function renderStats(items) {
   const offices = byCount(items, "office_level");
   const cargos = byCount(items, "cargo_group");
+  const rate = metadata.resignations_per_business_day;
 
   const stats = [
     ["Casos registrados", items.length],
     ["Ministros", cargos["Ministro/a"] ?? offices.minister ?? 0],
     ["Subsecretarios", cargos["Subsecretario/a"] ?? offices.subsecretary ?? 0],
-    ["Seremis", metadata.seremi_count ?? offices.seremi ?? 0]
+    ["Seremis", metadata.seremi_count ?? offices.seremi ?? 0],
+    [`Renuncias por día hábil (${items.length}/${metadata.business_days_elapsed || "—"})`, rate == null ? "—" : rate.toLocaleString("es-CL", { maximumFractionDigits: 2 })]
   ];
 
   els.stats.innerHTML = stats.map(([label, value]) => `
@@ -118,6 +140,65 @@ function renderStats(items) {
       <span>${escapeHtml(label)}</span>
     </div>
   `).join("");
+}
+
+function renderTimelineChart(items) {
+  const startISO = metadata.government_start || "2026-03-11";
+  const endISO = metadata.updated_at || items[0]?.exit_date || startISO;
+  const start = dateFromISO(startISO);
+  const end = dateFromISO(endISO);
+  const totalDays = Math.max(daysBetween(start, end), 1);
+  const counts = byCount(items.filter((item) => item.exit_date >= startISO), "exit_date");
+  const points = [];
+  let cumulative = 0;
+
+  for (let i = 0; i <= totalDays; i += 1) {
+    const dateValue = addDays(start, i);
+    const iso = isoFromDate(dateValue);
+    cumulative += counts[iso] || 0;
+    points.push({ iso, dateValue, day: i, count: counts[iso] || 0, cumulative });
+  }
+
+  const width = 720;
+  const height = 260;
+  const pad = { top: 18, right: 22, bottom: 38, left: 42 };
+  const innerWidth = width - pad.left - pad.right;
+  const innerHeight = height - pad.top - pad.bottom;
+  const maxValue = Math.max(...points.map((point) => point.cumulative), 1);
+  const xFor = (point) => pad.left + (point.day / totalDays) * innerWidth;
+  const yFor = (value) => pad.top + innerHeight - (value / maxValue) * innerHeight;
+  const path = points.map((point, index) => `${index === 0 ? "M" : "L"} ${xFor(point).toFixed(2)} ${yFor(point.cumulative).toFixed(2)}`).join(" ");
+  const area = `${path} L ${pad.left + innerWidth} ${pad.top + innerHeight} L ${pad.left} ${pad.top + innerHeight} Z`;
+  const eventPoints = points.filter((point) => point.count > 0);
+  const monthTicks = points.filter((point, index) => index === 0 || point.dateValue.getDate() === 1 || index === points.length - 1);
+
+  els.timelineHint.textContent = `${maxValue} casos acumulados · ${metadata.business_days_elapsed} días hábiles`;
+  els.timelineChart.innerHTML = `
+    <svg class="timeline-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Renuncias acumuladas desde el 11 de marzo de 2026">
+      <title>Renuncias acumuladas desde el 11 de marzo de 2026</title>
+      <line class="timeline-axis" x1="${pad.left}" y1="${pad.top + innerHeight}" x2="${pad.left + innerWidth}" y2="${pad.top + innerHeight}"></line>
+      <line class="timeline-axis" x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${pad.top + innerHeight}"></line>
+      ${[0, Math.ceil(maxValue / 2), maxValue].map((value) => `
+        <g>
+          <line class="timeline-grid" x1="${pad.left}" y1="${yFor(value)}" x2="${pad.left + innerWidth}" y2="${yFor(value)}"></line>
+          <text class="timeline-y-label" x="${pad.left - 10}" y="${yFor(value) + 4}">${value}</text>
+        </g>
+      `).join("")}
+      <path class="timeline-area" d="${area}"></path>
+      <path class="timeline-line" d="${path}"></path>
+      ${eventPoints.map((point) => `
+        <circle class="timeline-dot" cx="${xFor(point)}" cy="${yFor(point.cumulative)}" r="${point.count > 1 ? 4.2 : 3}">
+          <title>${formatDate(point.iso)}: ${point.count} salidas; ${point.cumulative} acumuladas</title>
+        </circle>
+      `).join("")}
+      ${monthTicks.map((point) => `
+        <g>
+          <line class="timeline-tick" x1="${xFor(point)}" y1="${pad.top + innerHeight}" x2="${xFor(point)}" y2="${pad.top + innerHeight + 5}"></line>
+          <text class="timeline-x-label" x="${xFor(point)}" y="${height - 12}">${new Intl.DateTimeFormat("es-CL", { month: "short" }).format(point.dateValue)}</text>
+        </g>
+      `).join("")}
+    </svg>
+  `;
 }
 
 function renderBars(container, counts, labels) {
@@ -362,6 +443,7 @@ async function boot() {
   }
 
   renderStats(cases);
+  renderTimelineChart(cases);
   renderBars(els.officeBars, byCount(cases, "ministerio_master"), {});
   renderRegionMap(cases);
   els.officeHint.textContent = `${cases.length} casos`;

@@ -12,9 +12,28 @@ from openpyxl import load_workbook
 
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKBOOK = ROOT / "data" / "contador de renuncias, 1 de agosto.xlsm"
+WORKBOOK_PATTERN = "contador de renuncias,*"
 OUTPUT = ROOT / "data" / "cases.json"
 SOURCE_OVERRIDES = ROOT / "data" / "source_overrides.json"
+GOVERNMENT_START = date(2026, 3, 11)
+CHILE_HOLIDAYS_2026 = {
+    date(2026, 1, 1),
+    date(2026, 4, 3),
+    date(2026, 4, 4),
+    date(2026, 5, 1),
+    date(2026, 5, 21),
+    date(2026, 6, 21),
+    date(2026, 6, 29),
+    date(2026, 7, 16),
+    date(2026, 8, 15),
+    date(2026, 9, 18),
+    date(2026, 9, 19),
+    date(2026, 10, 12),
+    date(2026, 10, 31),
+    date(2026, 11, 1),
+    date(2026, 12, 8),
+    date(2026, 12, 25),
+}
 
 INCLUDE_RECOMMENDATIONS = {
     "add_to_core_counter",
@@ -66,6 +85,7 @@ MINISTRY_ALIASES = {
     "culturas las artes y el patrimonio": "Ministerio de las Culturas, las Artes y el Patrimonio",
     "desarrollo social y familia": "Ministerio de Desarrollo Social y Familia",
     "desarrollo social y familia mujer y equidad de genero": "Ministerio de Desarrollo Social y Familia",
+    "deporte": "Ministerio del Deporte",
     "economia": "Ministerio de Economía, Fomento y Turismo",
     "economia fomento y turismo": "Ministerio de Economía, Fomento y Turismo",
     "economia y mineria": "Ministerio de Economía, Fomento y Turismo",
@@ -88,6 +108,8 @@ MINISTRY_ALIASES = {
     "vivienda y urbanismo": "Ministerio de Vivienda y Urbanismo",
 }
 
+NEW_COUNT_STATUSES = {"confirmed_named"}
+
 
 def strip_accents(value: str) -> str:
     return "".join(
@@ -108,6 +130,28 @@ def load_source_overrides() -> dict[str, dict[str, str | None]]:
     if not SOURCE_OVERRIDES.exists():
         return {}
     return json.loads(SOURCE_OVERRIDES.read_text(encoding="utf-8"))
+
+
+def latest_workbook() -> Path:
+    candidates = [
+        path
+        for path in (ROOT / "data").glob(WORKBOOK_PATTERN)
+        if path.suffix.lower() in {".xlsx", ".xlsm"} and not path.name.startswith("~$")
+    ]
+    if not candidates:
+        raise FileNotFoundError("No se encontro una base contador de renuncias en data/")
+    return max(candidates, key=lambda path: path.stat().st_mtime)
+
+
+def existing_sources_by_name() -> dict[str, dict[str, str | None]]:
+    if not OUTPUT.exists():
+        return {}
+    payload = json.loads(OUTPUT.read_text(encoding="utf-8"))
+    return {
+        normalize_lookup_key(case.get("person_name")): case.get("source") or {}
+        for case in payload.get("cases", [])
+        if case.get("person_name") and case.get("source")
+    }
 
 
 def iso_date(value: Any) -> str | None:
@@ -173,13 +217,44 @@ def normalize_lookup_key(value: str | None) -> str:
 
 
 def ministry_from_master(row: dict[str, Any]) -> str:
-    raw = clean_text(row.get("ministerio_master"))
+    raw = clean_text(row.get("ministerio_master")) or clean_text(row.get("ministry"))
     key = normalize_lookup_key(raw)
     ministry = MINISTRY_ALIASES.get(key)
     if ministry not in VALID_CHILE_MINISTRIES:
         case_id = clean_text(row.get("master_id")) or "sin_id"
         raise ValueError(f"Ministerio master invalido en {case_id}: {raw!r}")
     return ministry
+
+
+def office_level_from_rank(rank: str | None) -> str:
+    text = normalize_lookup_key(rank)
+    if text in {"ministro", "ministra"}:
+        return "minister"
+    if text in {"subsecretario", "subsecretaria"}:
+        return "subsecretary"
+    if text == "seremi":
+        return "seremi"
+    if "director nacional" in text or "directora nacional" in text or text in {"superintendente", "superintendenta"}:
+        return "national_director"
+    if "director regional" in text or "directora regional" in text:
+        return "regional_director"
+    if "subdirector" in text:
+        return "deputy_director"
+    if "jefatura" in text:
+        return "division_head"
+    return "other"
+
+
+def cargo_group_from_level(level: str) -> str:
+    return {
+        "minister": "Ministro/a",
+        "subsecretary": "Subsecretario/a",
+        "seremi": "Seremi",
+        "national_director": "Director/a nacional",
+        "regional_director": "Director/a regional",
+        "deputy_director": "Subdirector/a",
+        "division_head": "Jefatura",
+    }.get(level, "Otros cargos")
 
 
 def region_group(value: str) -> str:
@@ -208,6 +283,28 @@ def exit_type(raw: str | None) -> str:
     if "renuncia" in text or "aceptada" in text:
         return "resignation"
     return "unknown"
+
+
+def updated_at_from_summary(wb: Any, fallback: date) -> str:
+    if "Resumen" not in wb.sheetnames:
+        return fallback.isoformat()
+    ws = wb["Resumen"]
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if clean_text(row[0]) == "Actualizado" and row[1]:
+            return iso_date(row[1]) or fallback.isoformat()
+    return fallback.isoformat()
+
+
+def business_days_inclusive(start: date, end: date) -> int:
+    if end < start:
+        return 0
+    days = 0
+    current = start
+    while current <= end:
+        if current.weekday() < 5 and current not in CHILE_HOLIDAYS_2026:
+            days += 1
+        current += timedelta(days=1)
+    return days
 
 
 def reason_category(row: dict[str, Any], summary: str | None) -> str:
@@ -250,17 +347,92 @@ def source_for(row: dict[str, Any], overrides: dict[str, dict[str, str | None]])
     return {"outlet": outlet or "Fuente", "url": url, "title": title}
 
 
+def source_for_new(row: dict[str, Any], preserved: dict[str, dict[str, str | None]], rk_sources: dict[str, dict[str, str | None]]) -> dict[str, str | None]:
+    name_key = normalize_lookup_key(clean_text(row.get("name")))
+    if name_key in rk_sources:
+        return rk_sources[name_key]
+    if name_key in preserved:
+        return preserved[name_key]
+    article = clean_text(row.get("source_article")) or clean_text(row.get("source_article_abs"))
+    title = clean_text(row.get("source_article"))
+    return {"outlet": "Fuente", "url": None, "title": title or article}
+
+
+def renunciaskast_sources(wb: Any) -> dict[str, dict[str, str | None]]:
+    if "RenunciasKast" not in wb.sheetnames:
+        return {}
+    ws = wb["RenunciasKast"]
+    rows = list(ws.iter_rows(values_only=True))
+    headers = list(rows[0])
+    index = {h: i for i, h in enumerate(headers) if h}
+    sources = {}
+    for raw_row in rows[1:]:
+        row = {h: raw_row[i] if i < len(raw_row) else None for h, i in index.items()}
+        name = clean_text(row.get("n"))
+        if not name:
+            continue
+        sources[normalize_lookup_key(name)] = {
+            "outlet": clean_text(row.get("medio")) or "Fuente",
+            "url": clean_text(row.get("url")),
+            "title": clean_text(row.get("razon")) or clean_text(row.get("medio")),
+        }
+    return sources
+
+
 def build() -> dict[str, Any]:
-    wb = load_workbook(WORKBOOK, read_only=True, data_only=True, keep_vba=True)
+    workbook = latest_workbook()
+    wb = load_workbook(workbook, read_only=True, data_only=True, keep_vba=workbook.suffix.lower() == ".xlsm")
     source_overrides = load_source_overrides()
+    preserved_sources = existing_sources_by_name()
+    rk_sources = renunciaskast_sources(wb)
     ws = wb["Master"]
     rows = list(ws.iter_rows(values_only=True))
     headers = list(rows[0])
     index = {h: i for i, h in enumerate(headers) if h}
     cases: list[dict[str, Any]] = []
 
+    is_new_schema = {"id", "name", "position", "count_status"}.issubset(set(headers))
+
     for raw_row in rows[1:]:
         row = {h: raw_row[i] if i < len(raw_row) else None for h, i in index.items()}
+        if is_new_schema:
+            if clean_text(row.get("count_status")) not in NEW_COUNT_STATUSES:
+                continue
+            name = clean_text(row.get("name"))
+            if not name:
+                continue
+            date_value = iso_date(row.get("exit_date"))
+            summary = clean_text(row.get("evidence")) or clean_text(row.get("notes")) or "Sin motivo publico detallado."
+            raw_cargo = clean_text(row.get("position")) or clean_text(row.get("rank"))
+            level = office_level_from_rank(clean_text(row.get("rank")) or raw_cargo)
+            cargo_group = cargo_group_from_level(level)
+            region = clean_text(row.get("region")) or "Nacional"
+            ministry_master = ministry_from_master(row)
+            case = {
+                "case_id": clean_text(row.get("id")),
+                "person_name": name,
+                "office_level": level,
+                "cargo_group": cargo_group,
+                "cargo_group_key": slugify(cargo_group),
+                "office_title": raw_cargo,
+                "ministerio_master": ministry_master,
+                "ministry": ministry_master,
+                "territory_type": "national" if region == "Nacional" else "regional",
+                "region": region,
+                "region_group": region_group(region),
+                "exit_date": date_value,
+                "exit_type": exit_type(clean_text(row.get("exit_type"))),
+                "reason_category": reason_category(row, summary),
+                "reason_summary": summary,
+                "has_judicial_or_formal_complaint": reason_category(row, summary) == "judicial_or_formal_complaint",
+                "verification_status": "verified",
+                "count_recommendation": clean_text(row.get("count_status")),
+                "seremi_counter": None,
+                "source": source_for_new(row, preserved_sources, rk_sources),
+            }
+            cases.append(case)
+            continue
+
         recommendation = clean_text(row.get("recomendacion_conteo"))
         seremi_counter = numeric_counter(row.get("Seremis Contador"))
         counted_by_master = seremi_counter is not None and recommendation not in EXCLUDE_RECOMMENDATIONS
@@ -305,20 +477,26 @@ def build() -> dict[str, Any]:
     cargo_counts = Counter(item["cargo_group"] for item in cases)
     ministry_counts = Counter(item["ministerio_master"] for item in cases)
     region_counts = Counter(item["region_group"] for item in cases)
+    updated_at = updated_at_from_summary(wb, max((datetime.fromisoformat(item["exit_date"]).date() for item in cases if item.get("exit_date")), default=date.today()))
+    updated_date = datetime.fromisoformat(updated_at).date()
+    business_days = business_days_inclusive(GOVERNMENT_START, updated_date)
+    resignations_per_business_day = round(len(cases) / business_days, 3) if business_days else None
     return {
         "metadata": {
             "title": "Renuncias Tracker",
-            "updated_at": "2026-08-01",
-            "source_note": "Base generada desde la pestaña Master de contador de renuncias, 1 de agosto.xlsm.",
+            "updated_at": updated_at,
+            "source_note": f"Base generada desde la pestaña Master de {workbook.name}.",
             "case_count": len(cases),
-            "seremi_count": max(
-                (item["seremi_counter"] or 0 for item in cases if item["office_level"] == "seremi"),
-                default=0,
-            ),
+            "seremi_count": max((item["seremi_counter"] or 0 for item in cases if item["office_level"] == "seremi"), default=0)
+            or office_counts.get("seremi", 0),
             "office_counts": dict(office_counts),
             "cargo_counts": dict(cargo_counts),
             "ministry_counts": dict(ministry_counts),
             "region_counts": dict(region_counts),
+            "government_start": GOVERNMENT_START.isoformat(),
+            "business_days_elapsed": business_days,
+            "business_day_basis": "Lunes a viernes, excluyendo feriados nacionales de Chile.",
+            "resignations_per_business_day": resignations_per_business_day,
         },
         "cases": cases,
     }

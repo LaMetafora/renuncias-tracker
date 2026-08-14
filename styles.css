@@ -314,6 +314,10 @@ h3 {
   border-radius: 28px;
 }
 
+.timeline-panel {
+  margin-bottom: 18px;
+}
+
 .panel-head {
   position: relative;
   z-index: 1;
@@ -373,6 +377,59 @@ h3 {
   font-family: "Space Mono", ui-monospace, monospace;
   font-size: 13px;
   text-align: right;
+}
+
+.timeline-chart {
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-svg {
+  display: block;
+  width: 100%;
+  min-height: 240px;
+}
+
+.timeline-axis,
+.timeline-tick {
+  stroke: rgba(7, 27, 61, 0.55);
+  stroke-width: 1;
+}
+
+.timeline-grid {
+  stroke: rgba(7, 27, 61, 0.12);
+  stroke-width: 1;
+}
+
+.timeline-area {
+  fill: rgba(95, 109, 134, 0.18);
+}
+
+.timeline-line {
+  fill: none;
+  stroke: var(--navy);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.timeline-dot {
+  fill: var(--danger);
+  stroke: var(--sheet);
+  stroke-width: 1.4;
+}
+
+.timeline-x-label,
+.timeline-y-label {
+  fill: var(--muted);
+  font-family: "Space Mono", ui-monospace, monospace;
+  font-size: 11px;
+  text-anchor: middle;
+  text-transform: uppercase;
+}
+
+.timeline-y-label {
+  text-anchor: end;
 }
 
 .region-map {
